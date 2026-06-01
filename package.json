@@ -1,0 +1,16 @@
+{
+  "name": "bramble-dash",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A retro side-scrolling action game built with HTML Canvas.",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "start": "node scripts/serve.mjs",
+    "test": "npm run test:smoke",
+    "test:smoke": "node scripts/smoke-test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
