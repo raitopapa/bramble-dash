@@ -1,0 +1,65 @@
+name: Auto Merge
+
+on:
+  workflow_run:
+    workflows:
+      - Smoke Test
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to merge after checking the auto-merge label
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Merge labeled PR after smoke test passes
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.pull_requests[0])
+    steps:
+      - name: Resolve pull request number
+        id: pr
+        env:
+          DISPATCH_PR_NUMBER: ${{ inputs.pr_number }}
+          WORKFLOW_RUN_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+        run: |
+          pr_number="${DISPATCH_PR_NUMBER:-$WORKFLOW_RUN_PR_NUMBER}"
+          if [ -z "$pr_number" ]; then
+            echo "No pull request number found."
+            exit 1
+          fi
+          echo "number=$pr_number" >> "$GITHUB_OUTPUT"
+
+      - name: Check auto-merge label
+        id: label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: |
+          labels="$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name')"
+          if printf '%s\n' "$labels" | grep -Fxq 'auto-merge'; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Pull request #$PR_NUMBER has the auto-merge label."
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Pull request #$PR_NUMBER does not have the auto-merge label; skipping."
+          fi
+
+      - name: Merge pull request
+        if: steps.label.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: gh pr merge "$PR_NUMBER" --squash --delete-branch
