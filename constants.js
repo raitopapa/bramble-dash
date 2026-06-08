@@ -1,100 +1,300 @@
-import { LEVELS } from '../content/levels.js';
-import { GRAVITY } from '../core/constants.js';
+import { COYOTE, GRAVITY, GRAVITY_E, GROWANIM, HOLD_G, INVINC, JBUF, JUMP_V, MAXFALL } from '../core/constants.js';
 import { edge, input } from '../core/input.js';
-import { aabb, clamp, lerp, rand } from '../core/utils.js';
-import { duckMusic, sfx1up, sfxClear, sfxCoin, sfxFlag, sfxFlagDn, sfxKick, sfxPause, sfxStomp, sfxTick, sfxWin } from '../engine/audio.js';
-import { camH, camW, canvas } from '../engine/canvas.js';
-import { Chomper, Particle, Player, Shellback, Stomper } from './entities.js';
-import { addCoin, addScore, collideX, collideY, game, gget, gset, killEnemy, popupWorld, spawnPuff, spawnSpark } from './state.js';
+import { clamp, lerp, rand } from '../core/utils.js';
+import { drawCoin, drawCreature, shellDome } from '../draw/creatures.js';
+import { duckMusic, sfxBat, sfxBump, sfxDie, sfxFire, sfxJump, sfxKick, sfxPowerup, sfxShrink } from '../engine/audio.js';
+import { camW, ctx, ellipse, rr, scale } from '../engine/canvas.js';
+import { collideX, collideY, countFB, game, solidTile, spawnDust, spawnFireball, spawnSpark } from './state.js';
 
-// ============ GAME FLOW ============
-function newGame(){ game.score=0; game.coins=0; game.lives=3; if(!game.player) game.player=new Player(); game.player.form='small'; game.confetti=[]; game.mapNode=0; game.mapMaxUnlocked=0; game.mapCleared=[]; game.state='worldmap'; duckMusic(1); }
-function startLevel(idx){
-  const lvl=LEVELS[idx]();
-  game.levelIndex=idx; game.level=lvl; game.grid=lvl.grid; game.theme=lvl.theme;
-  game.worldW=lvl.grid.w*16; game.worldH=lvl.grid.h*16;
-  game.goalX=lvl.goalX; game.goalGroundY=lvl.goalGroundY; game.goalPoleTop=lvl.goalPoleTop;
-  game.enemies=[]; game.items=[]; game.fireballs=[]; game.particles=[]; game.popups=[]; game.popcoins=[]; game.bumps=[];
-  const g=lvl.grid;
-  for(let y=0;y<g.h;y++) for(let x=0;x<g.w;x++){ const c=g.c[y][x];
-    if(c==='g'){ game.enemies.push(new Stomper(x,y)); g.c[y][x]=' '; }
-    else if(c==='k'){ game.enemies.push(new Shellback(x,y)); g.c[y][x]=' '; }
-    else if(c==='c'){ game.enemies.push(new Chomper(x,y)); g.c[y][x]=' '; }
+// ============ PLAYER ============
+class Player{
+  constructor(){ this.form='small'; this.sizeFromForm(); this.x=0; this.y=0; this.vx=0; this.vy=0;
+    this.facing=1; this.onGround=false; this.jumping=false; this.jumpHeld=false; this.coyote=0; this.jumpBuffer=0;
+    this.invinc=0; this.growT=0; this.combo=0; this.crouch=false; this.dead=false; this.onPole=false;
+    this.walkPhase=0; this.blink=false; this.blinkT=2; this.landT=0; this._lastGround=false; }
+  sizeFromForm(){ if(this.form==='small'){ this.w=12; this.h=14; } else { this.w=12; this.h=24; } }
+  setSizeKeepFeet(){ const feet=this.y+this.h; this.sizeFromForm(); this.y=feet-this.h; }
+  resetForLevel(lvl){ this.sizeFromForm(); this.x=lvl.spawnX; this.y=lvl.spawnFeetY-this.h; this.vx=0; this.vy=0;
+    this.facing=1; this.onGround=false; this.jumping=false; this.coyote=0; this.jumpBuffer=0; this.invinc=0; this.growT=0;
+    this.combo=0; this.crouch=false; this.dead=false; this.onPole=false; this.walkPhase=0; this.blink=false; this.blinkT=rand(2,4); this.landT=0; this._lastGround=false; }
+  grow(){ if(this.form==='small'){ this.form='big'; this.setSizeKeepFeet(); this.growT=GROWANIM; this.invinc=Math.max(this.invinc,0.6); sfxPowerup(); spawnSpark(this.x+this.w/2,this.y+this.h/2,'#fff'); } }
+  toFire(){ this.form='fire'; this.setSizeKeepFeet(); this.growT=GROWANIM; this.invinc=Math.max(this.invinc,0.6); sfxPowerup(); spawnSpark(this.x+this.w/2,this.y+this.h/2,'#ffae3a'); }
+  hurt(){ if(this.invinc>0||this.dead) return;
+    if(this.form==='fire'){ this.form='big'; this.setSizeKeepFeet(); this.invinc=INVINC; sfxShrink(); spawnSpark(this.x+this.w/2,this.y,'#fff'); }
+    else if(this.form==='big'){ this.form='small'; this.setSizeKeepFeet(); this.invinc=INVINC; sfxShrink(); spawnSpark(this.x+this.w/2,this.y,'#fff'); }
+    else this.die();
   }
-  game.time=lvl.time; game.cleared=false; game.clearPhase=null; game.clearTimer=0; game.holdT=0; game.fanfarePlayed=false; game.deathTimer=0;
-  if(!game.player) game.player=new Player();
-  game.player.resetForLevel(lvl);
-  game.camX=clamp(game.player.x-camW*0.4,0,Math.max(0,game.worldW-camW));
-  const cyMin=Math.min(0,game.worldH-camH), cyMax=Math.max(0,game.worldH-camH);
-  game.camY=clamp(game.player.y-camH*0.55,cyMin,cyMax);
-  game.state='playing'; duckMusic(1);
+  die(){ if(this.dead) return; this.dead=true; game.lives--; game.state='dying'; game.deathTimer=1.8; this.vx=0; this.vy=-6.6; duckMusic(0); sfxDie(); }
+  update(dt){
+    if(this.invinc>0) this.invinc-=dt;
+    if(this.growT>0) this.growT-=dt;
+    if(this.landT>0) this.landT-=dt;
+    this.blinkT-=dt; if(this.blinkT<=0){ if(this.blink){ this.blink=false; this.blinkT=rand(1.6,4.5); } else { this.blink=true; this.blinkT=0.12; } }
+    this.crouch = (this.form!=='small' && input.down && this.onGround && Math.abs(this.vx)<0.7);
+    const running=input.fire, onG=this.onGround;
+    const maxWalk=1.7, maxRun=2.95, maxS=running?maxRun:maxWalk;
+    const accel = onG?(running?0.235:0.16):0.12;
+    let dir=0; if(input.left) dir=-1; else if(input.right) dir=1;
+    if(this.crouch) dir=0;
+    if(dir!==0){ this.facing=dir; if(Math.sign(this.vx)!==dir || Math.abs(this.vx)<maxS) this.vx+=accel*dir; }
+    else { const f=onG?0.2:0.05; if(this.vx>0){ this.vx-=f; if(this.vx<0)this.vx=0; } else if(this.vx<0){ this.vx+=f; if(this.vx>0)this.vx=0; } }
+    if(this.vx>maxS && onG && dir>=0) this.vx=Math.max(maxS,this.vx-0.08);
+    if(this.vx<-maxS && onG && dir<=0) this.vx=Math.min(-maxS,this.vx+0.08);
+    this.vx=clamp(this.vx,-maxRun,maxRun);
+    if(onG) this.coyote=COYOTE; else if(this.coyote>0) this.coyote--;
+    if(edge.jump) this.jumpBuffer=JBUF; else if(this.jumpBuffer>0) this.jumpBuffer--;
+    if(this.jumpBuffer>0 && (onG||this.coyote>0)){ this.vy=-JUMP_V; this.onGround=false; this.coyote=0; this.jumpBuffer=0; this.jumping=true; sfxJump(); spawnDust(this.x+this.w/2,this.y+this.h); }
+    this.jumpHeld=input.jump;
+    if(this.vy<0 && !this.jumpHeld && this.jumping){ this.vy*=0.45; this.jumping=false; }
+    const g=(this.vy<0 && this.jumpHeld)?HOLD_G:GRAVITY;
+    this.vy+=g; if(this.vy>MAXFALL) this.vy=MAXFALL;
+    this._hitL=this._hitR=this._hitU=this._hitD=false; this.onGround=false;
+    collideX(this); collideY(this,true);
+    if(this._hitD) this.jumping=false;
+    if(this.onGround && !this._lastGround){ this.landT=0.12; spawnDust(this.x+this.w/2,this.y+this.h); }
+    this._lastGround=this.onGround;
+    if(onG && Math.abs(this.vx)>0.3) this.walkPhase += Math.abs(this.vx)*dt*9;
+    if(this.y > game.worldH+40){ this.die(); return; }
+    if(this.form==='fire' && edge.fire && countFB()<2){ spawnFireball(this); sfxFire(); }
+    if(this.onGround) this.combo=0;
+  }
+  draw(){
+    if(this.invinc>0 && game.state==='playing' && Math.floor(this.invinc*16)%2===0) return;
+    let sx=1, sy=1;
+    if(!this.onGround){ if(this.vy<-0.5){ sy=1.12; sx=0.9; } else if(this.vy>1){ sy=0.95; sx=1.06; } }
+    if(this.landT>0){ const k=this.landT/0.12; sy=1-0.16*k; sx=1+0.2*k; }
+    if(this.growT>0){ const k=this.growT/GROWANIM; const w=Math.sin(k*Math.PI*4)*0.08*k; sx+=w; sy-=w; }
+    const size = this.form==='small'?14:22;
+    drawCreature(this.x+this.w/2, this.y+this.h, size, this.form, {facing:this.facing, onGround:this.onGround, vy:this.vy, walkPhase:this.walkPhase, blink:this.blink, crouch:this.crouch, sx, sy});
+  }
 }
-function nextLevel(){ const idx=game.levelIndex; if(game.mapCleared) game.mapCleared[idx]=true; const ni=idx+1; if(ni>=LEVELS.length){ game.state='win'; duckMusic(0); sfxWin(); } else { game.mapMaxUnlocked=Math.max(game.mapMaxUnlocked|0, ni); game.mapNode=ni; game.state='worldmap'; duckMusic(1); } }
-function startClear(){ game.state='levelclear'; game.cleared=true; game.clearPhase='slide'; const p=game.player; p.onPole=true; p.x=game.goalX-p.w/2; p.vx=0; p.vy=0; game.fanfarePlayed=false; game.holdT=0; duckMusic(0); sfxFlag(); }
-function updateClear(dt){
-  const p=game.player;
-  if(game.clearPhase==='slide'){ p.onPole=true; p.vx=0; p.facing=-1; p.y+=1.8; const baseY=game.goalGroundY; if(p.y+p.h>=baseY){ p.y=baseY-p.h; game.clearPhase='pause'; game.clearTimer=0.5; sfxFlagDn(); } }
-  else if(game.clearPhase==='pause'){ game.clearTimer-=dt; if(game.clearTimer<=0) game.clearPhase='walk'; }
-  else if(game.clearPhase==='walk'){ p.onPole=false; p.facing=1; p.vx=1.5; p.vy+=GRAVITY; p._hitL=p._hitR=p._hitD=false; p.onGround=false; collideX(p); collideY(p,false); p.walkPhase+=Math.abs(p.vx)*dt*9; if(p.x>game.goalX+64){ game.clearPhase='tally'; game.clearTimer=0; if(!game.fanfarePlayed){ sfxClear(); game.fanfarePlayed=true; } } }
-  else if(game.clearPhase==='tally'){ game.clearTimer+=dt; if(game.time>0){ if(game.clearTimer>0.02){ game.clearTimer=0; const dec=Math.min(game.time,3); game.time-=dec; addScore(Math.round(dec*50)); sfxTick(); } } else { game.holdT+=dt; if(game.holdT>1.3){ game.holdT=0; nextLevel(); } } }
+
+// ============ ENEMIES ============
+class Stomper{
+  constructor(tx,ty){ this.type='stomper'; this.w=14; this.h=14; this.x=tx*16+1; this.y=(ty+1)*16-this.h; this.vx=0; this.vy=0; this.dir=-1; this.squash=0; this.dead=false; this.walk=0; }
+  stomp(){ this.squash=0.4; this.vx=0; }
+  update(dt){
+    if(this.squash>0){ this.squash-=dt; if(this.squash<=0) this.dead=true; return; }
+    this.walk+=dt*6; this.vx=this.dir*0.55; this.vy+=GRAVITY_E; if(this.vy>7)this.vy=7;
+    this._hitL=this._hitR=this._hitD=false; this.onGround=false;
+    collideX(this); if(this._hitL) this.dir=1; if(this._hitR) this.dir=-1;
+    collideY(this,false);
+    if(this.y>game.worldH+80) this.dead=true;
+  }
+  draw(){ const cx=this.x+this.w/2, feet=this.y+this.h;
+    ctx.fillStyle='rgba(0,0,0,0.18)'; ellipse(cx,feet+1.5,this.w*0.5,2.2);
+    if(this.squash>0){ ctx.fillStyle='#9a5230'; rr(ctx,cx-8,feet-5,16,5,2.5); ctx.fill(); ctx.strokeStyle='#5a2e15'; ctx.lineWidth=1; rr(ctx,cx-8,feet-5,16,5,2.5); ctx.stroke(); return; }
+    const wob=Math.sin(this.walk);
+    ctx.fillStyle='#6e3a1f'; ellipse(cx-4.5,feet-1-(wob>0?1:0),3.2,2.2); ellipse(cx+4.5,feet-1-(wob<0?1:0),3.2,2.2);
+    ctx.fillStyle='#a85c2e'; rr(ctx,cx-7,feet-13,14,13,6); ctx.fill();
+    ctx.save(); ctx.globalAlpha=0.22; ctx.fillStyle='#6e3a1f'; rr(ctx,cx-7,feet-6.5,14,6.5,5); ctx.fill(); ctx.restore();
+    ctx.fillStyle='#fff'; ellipse(cx-3.2,feet-8.6,2.4,2.9); ellipse(cx+3.2,feet-8.6,2.4,2.9);
+    ctx.fillStyle='#1a1008'; const lk=this.dir*0.8; ellipse(cx-3.2+lk,feet-8.1,1.1,1.5); ellipse(cx+3.2+lk,feet-8.1,1.1,1.5);
+    ctx.strokeStyle='#3a1f10'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(cx-5.5,feet-12); ctx.lineTo(cx-1.5,feet-10.3); ctx.moveTo(cx+5.5,feet-12); ctx.lineTo(cx+1.5,feet-10.3); ctx.stroke();
+    ctx.strokeStyle='#5a2e15'; ctx.lineWidth=1; rr(ctx,cx-7,feet-13,14,13,6); ctx.stroke();
+  }
 }
-function updateDying(dt){ const p=game.player; p.vy+=GRAVITY; if(p.vy>9)p.vy=9; p.y+=p.vy; game.deathTimer-=dt; if(game.deathTimer<=0){ if(game.lives<0){ game.state='gameover'; duckMusic(0); } else { p.form='small'; startLevel(game.levelIndex); } } }
-function doStompBounce(){ const p=game.player; p.vy=input.jump?-5.7:-3.8; p.onGround=false; p.jumping=true; sfxStomp(); spawnPuff(p.x+p.w/2,p.y+p.h); }
-function stompReward(e){ const SC=[100,200,400,800,1000,2000,4000,8000]; const idx=Math.min(game.player.combo,SC.length-1); const val=SC[idx]; game.player.combo++; if(game.player.combo>=SC.length){ game.lives++; sfx1up(); popupWorld(e.x,e.y-6,'1UP','#fff'); } else { addScore(val); popupWorld(e.x,e.y-6,''+val); } }
-function resolvePlayerEnemies(){
-  const p=game.player; if(p.dead) return;
-  for(const e of game.enemies){ if(e.dead||(e.squash&&e.squash>0)) continue; if(!aabb(p,e)) continue;
-    const fromAbove = p.vy>0.5 && (p.y+p.h)-e.y < e.h*0.7;
-    if(e.type==='stomper'){ if(fromAbove){ e.stomp(); doStompBounce(); stompReward(e); } else { p.hurt(); if(p.dead) return; } }
-    else if(e.type==='shellback'){
-      if(e.state==='walk'){ if(fromAbove){ e.toShell(); doStompBounce(); stompReward(e); } else { p.hurt(); if(p.dead) return; } }
-      else if(e.state==='shell'){ const d=(p.x+p.w/2<e.x+e.w/2)?1:-1; if(fromAbove){ e.kick(d); doStompBounce(); } else { e.kick(d); if(d>0)e.x=p.x+p.w+1; else e.x=p.x-e.w-1; } }
-      else { if(fromAbove){ e.state='shell'; e.vx=0; e.wake=0; doStompBounce(); } else if(e.noHit<=0){ p.hurt(); if(p.dead) return; } }
+class Shellback{
+  constructor(tx,ty){ this.type='shellback'; this.w=14; this.h=22; this.x=tx*16+1; this.y=(ty+1)*16-this.h; this.vx=0; this.vy=0; this.dir=-1; this.state='walk'; this.dead=false; this.wake=0; this.noHit=0; this.walk=0; this.t=0; }
+  toShell(){ const feet=this.y+this.h; this.state='shell'; this.h=14; this.y=feet-this.h; this.vx=0; this.wake=0; }
+  toWalk(){ const feet=this.y+this.h; this.state='walk'; this.h=22; this.y=feet-this.h; this.dir=Math.random()<0.5?-1:1; }
+  kick(d){ this.state='slide'; this.dir=d; this.noHit=0.2; sfxKick(); }
+  update(dt){
+    this.t+=dt; this._hitL=this._hitR=this._hitD=false; this.onGround=false;
+    if(this.state==='walk'){
+      this.walk+=dt*6; this.vx=this.dir*0.5; this.vy+=GRAVITY_E; if(this.vy>7)this.vy=7;
+      collideX(this); if(this._hitL)this.dir=1; if(this._hitR)this.dir=-1;
+      collideY(this,false);
+      if(this.onGround){ const ftx=this.dir>0?Math.floor((this.x+this.w+1)/16):Math.floor((this.x-1)/16); const bty=Math.floor((this.y+this.h+1)/16); if(!solidTile(ftx,bty)) this.dir*=-1; }
+    } else if(this.state==='shell'){
+      this.vx=0; this.vy+=GRAVITY_E; if(this.vy>7)this.vy=7; collideX(this); collideY(this,false);
+      this.wake+=dt; if(this.wake>6) this.toWalk();
+    } else {
+      this.noHit-=dt; this.vx=this.dir*3.2; this.vy+=GRAVITY_E; if(this.vy>7)this.vy=7;
+      collideX(this); if(this._hitL){ this.dir=1; sfxBump(); } if(this._hitR){ this.dir=-1; sfxBump(); }
+      collideY(this,false);
     }
-    else if(e.type==='chomper'){ if(e.up>0.35){ p.hurt(); if(p.dead) return; } }
+    if(this.y>game.worldH+80) this.dead=true;
+  }
+  draw(){ const cx=this.x+this.w/2, feet=this.y+this.h;
+    ctx.fillStyle='rgba(0,0,0,0.18)'; ellipse(cx,feet+1.5,this.w*0.55,2.2);
+    if(this.state==='walk'){
+      const wob=Math.sin(this.walk);
+      ctx.fillStyle='#e8b84a'; ellipse(cx-4,feet-1-(wob>0?1:0),3,2); ellipse(cx+4,feet-1-(wob<0?1:0),3,2);
+      const hx=cx+this.dir*5.5, hy=feet-14;
+      ctx.fillStyle='#9ad97f'; ellipse(hx,hy,4,4.4);
+      ctx.fillStyle='#fff'; ellipse(hx+this.dir*1.2,hy-0.5,1.5,1.9); ctx.fillStyle='#1a1008'; ellipse(hx+this.dir*1.8,hy-0.3,0.9,1.2);
+      shellDome(cx,feet,'#2faa46',13);
+    } else {
+      shellDome(cx,feet,'#2faa46',13);
+      if(this.state==='slide'){ ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=1; const dir=this.dir; for(let i=0;i<2;i++){ const ax=cx-dir*(9+i*3); ctx.beginPath(); ctx.arc(ax,feet-7,3+i, dir>0?0.6:2.0, dir>0?2.0:3.6); ctx.stroke(); } }
+      else { ctx.fillStyle='#e8b84a'; ellipse(cx-7,feet-3,2.2,1.6); ellipse(cx+7,feet-3,2.2,1.6); }
+    }
   }
 }
-function updateCamera(){
-  const p=game.player;
-  const tx=p.x+p.w/2-camW*0.45;
-  game.camX=lerp(game.camX,tx,0.12); game.camX=clamp(game.camX,0,Math.max(0,game.worldW-camW));
-  const ty=p.y+p.h/2-camH*0.55;
-  const cyMin=Math.min(0,game.worldH-camH), cyMax=Math.max(0,game.worldH-camH);
-  game.camY=lerp(game.camY,ty,0.12); game.camY=clamp(game.camY,cyMin,cyMax);
+class Chomper{
+  constructor(tx,ty){ this.type='chomper'; this.centerX=tx*16+16; this.w=16; this.x=this.centerX-8; this.baseY=(ty+1)*16; this.h=16; this.t=rand(0,6); this.up=0; this.cyc=0; this.dead=false; this.y=this.baseY; }
+  update(dt){
+    const p=game.player;
+    const near = Math.abs((p.x+p.w/2)-this.centerX)<26 && (p.y+p.h) < this.baseY+10;
+    this.t+=dt*1.1; const cyc=Math.sin(this.t)*0.5+0.5; const target=near?0:cyc;
+    this.up=lerp(this.up,target,0.12); this.cyc=cyc;
+    this.y=this.baseY-this.up*24;
+  }
+  draw(){ const cx=this.centerX;
+    ctx.save(); ctx.beginPath(); ctx.rect(cx-30, this.baseY-220, 60, 220); ctx.clip();
+    const headY=this.y+6;
+    ctx.strokeStyle='#3aa33a'; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(cx,this.baseY); ctx.lineTo(cx,headY+2); ctx.stroke();
+    ctx.strokeStyle='#2c8a2c'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(cx-1.2,this.baseY); ctx.lineTo(cx-1.2,headY+2); ctx.stroke();
+    ctx.fillStyle='#46b846'; ellipse(cx-5,headY+8,4,2); ellipse(cx+5,headY+8,4,2);
+    const open=(this.cyc||0)*3.2;
+    ctx.fillStyle='#e23b3b'; ctx.beginPath(); ctx.arc(cx,headY,7,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#7a1414'; ctx.beginPath(); ctx.ellipse(cx,headY+0.5,5.5,2.0+open*0.6,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff';
+    for(let i=-2;i<=2;i++){ const tx=cx+i*2.2;
+      ctx.beginPath(); ctx.moveTo(tx-1,headY-1.4-open*0.6); ctx.lineTo(tx+1,headY-1.4-open*0.6); ctx.lineTo(tx,headY+0.4-open*0.4); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(tx-1,headY+1.4+open*0.6); ctx.lineTo(tx+1,headY+1.4+open*0.6); ctx.lineTo(tx,headY-0.4+open*0.4); ctx.fill(); }
+    ctx.fillStyle='#ffd23a'; ctx.beginPath(); ctx.arc(cx-3,headY-3,1.1,0,7); ctx.arc(cx+3,headY-3,1.1,0,7); ctx.fill();
+    ctx.strokeStyle='#a02020'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(cx,headY,7,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
 }
-function collectCoins(p){
-  const x0=Math.floor(p.x/16),x1=Math.floor((p.x+p.w-1)/16),y0=Math.floor(p.y/16),y1=Math.floor((p.y+p.h-1)/16);
-  for(let ty=y0;ty<=y1;ty++) for(let tx=x0;tx<=x1;tx++){ if(gget(tx,ty)==='o'){ gset(tx,ty,' '); addCoin(1); addScore(100); sfxCoin(); spawnSpark(tx*16+8,ty*16+8,'#ffe79a'); } }
+// ============ ITEMS / PROJECTILES ============
+class Mushroom{
+  constructor(tx,ty){ this.type='mushroom'; this.w=14; this.h=14; this.x=tx*16+1; this.y=ty*16; this.vx=0; this.vy=0; this.dir=1; this.state='emerge'; this.emerge=16; this.dead=false; }
+  update(dt){
+    if(this.state==='emerge'){ this.y-=0.6; this.emerge-=0.6; if(this.emerge<=0) this.state='walk'; return; }
+    this.vx=this.dir*0.95; this.vy+=GRAVITY_E; if(this.vy>7)this.vy=7;
+    this._hitL=this._hitR=this._hitD=false; this.onGround=false;
+    collideX(this); if(this._hitL)this.dir=1; if(this._hitR)this.dir=-1;
+    collideY(this,false);
+    if(this.y>game.worldH+80) this.dead=true;
+  }
+  draw(){ const cx=this.x+this.w/2, feet=this.y+this.h;
+    ctx.fillStyle='rgba(0,0,0,0.18)'; ellipse(cx,feet+1.5,this.w*0.5,2);
+    ctx.fillStyle='#ffe8c8'; rr(ctx,cx-4,feet-7,8,7,2); ctx.fill();
+    ctx.fillStyle='#3a2a1a'; ellipse(cx-2,feet-4,0.9,1.4); ellipse(cx+2,feet-4,0.9,1.4);
+    ctx.fillStyle='#e23b3b'; rr(ctx,cx-8,feet-15,16,9,5); ctx.fill();
+    ctx.fillStyle='#fff'; ellipse(cx,feet-11,2.4,2.2); ellipse(cx-5,feet-10,1.6,1.5); ellipse(cx+5,feet-10,1.6,1.5);
+    ctx.strokeStyle='#a02020'; ctx.lineWidth=1; rr(ctx,cx-8,feet-15,16,9,5); ctx.stroke();
+  }
 }
-function cull(){ game.enemies=game.enemies.filter(e=>!e.dead); game.items=game.items.filter(e=>!e.dead); game.fireballs=game.fireballs.filter(e=>!e.dead); }
-function updateParticlesOnly(dt){ for(const p of game.particles)p.update(dt); game.particles=game.particles.filter(p=>!p.dead); for(const p of game.popups)p.update(dt); game.popups=game.popups.filter(p=>!p.dead); for(const p of game.popcoins)p.update(dt); game.popcoins=game.popcoins.filter(p=>!p.dead); }
-function updatePlaying(dt){
-  const p=game.player;
-  if(edge.pause||edge.start){ game.state='paused'; duckMusic(0); sfxPause(); return; }
-  game.time-=dt*2.4; if(game.time<0)game.time=0;
-  if(game.time<=0 && !p.dead){ p.die(); return; }
-  p.update(dt);
-  if(game.state!=='playing') return;
-  for(const it of game.items){ it.update(dt); if(it.dead) continue; if(aabb(p,it)){ if(it.type==='mushroom'){ if(p.form==='small') p.grow(); addScore(1000); popupWorld(it.x,it.y-4,'1000'); it.dead=true; } else if(it.type==='flower'){ p.toFire(); addScore(1000); popupWorld(it.x,it.y-4,'1000'); it.dead=true; } } }
-  for(const e of game.enemies) e.update(dt);
-  for(const e of game.enemies){ if(e.dead)continue; if(e.type==='shellback'&&e.state==='slide'){ for(const o of game.enemies){ if(o===e||o.dead||(o.squash&&o.squash>0)||o.type==='chomper')continue; if(aabb(e,o)){ killEnemy(o); addScore(200); popupWorld(o.x,o.y-4,'200'); sfxKick(); } } } }
-  resolvePlayerEnemies();
-  if(game.state!=='playing') return;
-  for(const fb of game.fireballs){ fb.update(dt); if(fb.dead)continue; for(const e of game.enemies){ if(e.dead||(e.squash&&e.squash>0))continue; if(e.type==='chomper'){ if(e.up>0.1&&aabb(fb,e)){ e.dead=true; spawnPuff(e.centerX,e.y+e.h/2); addScore(200); popupWorld(e.x,e.y-4,'200'); fb.dead=true; spawnSpark(fb.x,fb.y,'#ffae3a'); sfxStomp(); break; } } else { if(aabb(fb,e)){ killEnemy(e); addScore(100); popupWorld(e.x,e.y-4,'100'); fb.dead=true; spawnSpark(fb.x,fb.y,'#ffae3a'); break; } } } }
-  collectCoins(p);
-  for(const b of game.bumps) b.t+=dt; game.bumps=game.bumps.filter(b=>b.t<b.dur);
-  updateParticlesOnly(dt);
-  updateCamera();
-  if(!game.cleared && (p.x+p.w/2)>=game.goalX) startClear();
-  cull();
+class Flower{
+  constructor(tx,ty){ this.type='flower'; this.w=14; this.h=14; this.x=tx*16+1; this.baseY=(ty-1)*16; this.y=ty*16; this.state='emerge'; this.emerge=16; this.t=0; this.dead=false; }
+  update(dt){
+    if(this.state==='emerge'){ this.y-=0.6; this.emerge-=0.6; if(this.emerge<=0) this.state='idle'; return; }
+    this.t+=dt; this.y=this.baseY+Math.sin(this.t*3)*1.5;
+  }
+  draw(){ const cx=this.x+this.w/2, cy=this.y+this.h/2;
+    ctx.save(); ctx.globalAlpha=0.3; ctx.fillStyle='#ffd23a'; ellipse(cx,cy,this.w*0.8,this.h*0.8); ctx.restore();
+    ctx.strokeStyle='#3aa33a'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx,this.y+this.h); ctx.lineTo(cx,cy+2); ctx.stroke();
+    const pc=8; for(let i=0;i<pc;i++){ const a=i/pc*Math.PI*2+this.t; ctx.fillStyle=i%2?'#ff7a3a':'#ffb13a'; ellipse(cx+Math.cos(a)*5,cy+Math.sin(a)*5,2.6,2.6); }
+    ctx.fillStyle='#ffe06a'; ctx.beginPath(); ctx.arc(cx,cy,3.2,0,7); ctx.fill();
+    ctx.fillStyle='#b9780c'; ctx.beginPath(); ctx.arc(cx,cy,1.4,0,7); ctx.fill();
+  }
 }
-function updateMenu(dt){
-  if(edge.start||edge.jump||game.oneShotStart){ game.oneShotStart=false; newGame(); return; }
-  game.oneShotStart=false;
-  if(game.state==='win'){
-    if(game.confetti.length<80 && Math.random()<0.5){ const cols=['#ff5d5d','#ffd23a','#5fd24a','#5db4ff','#ff8a3a']; game.confetti.push(new Particle(rand(0,canvas.width), -10, rand(-0.6,0.6), rand(1,3), {type:'confetti', size:rand(4,7), life:rand(2.5,4), g:0.05, color:cols[Math.floor(rand(0,5))], rotv:rand(-0.3,0.3)})); }
-    for(const c of game.confetti) c.update(dt); game.confetti=game.confetti.filter(c=>!c.dead && c.y<canvas.height+20);
+class Fireball{
+  constructor(x,y,dir){ this.type='fireball'; this.w=8; this.h=8; this.x=x; this.y=y; this.vx=dir*4.6; this.vy=2; this.dir=dir; this.dead=false; this.life=2.6; this.spin=0; }
+  update(dt){
+    this.spin+=dt*22; this.vy+=0.45; if(this.vy>6.5)this.vy=6.5;
+    this._hitL=this._hitR=this._hitD=this._hitU=false;
+    collideX(this); if(this._hitL||this._hitR){ this.dead=true; spawnSpark(this.x+this.w/2,this.y+this.h/2,'#ffae3a'); }
+    collideY(this,false); if(this._hitD){ this.vy=-3.4; }
+    this.life-=dt; if(this.life<=0) this.dead=true;
+    if(this.x<game.camX-120 || this.x>game.camX+camW+120) this.dead=true;
+  }
+  draw(){ const cx=this.x+this.w/2, cy=this.y+this.h/2;
+    ctx.save(); ctx.globalAlpha=0.4; ctx.fillStyle='#ffae3a'; ctx.beginPath(); ctx.arc(cx,cy,7,0,7); ctx.fill(); ctx.restore();
+    ctx.fillStyle='#ff7a1a'; ctx.beginPath(); ctx.arc(cx,cy,4.2,0,7); ctx.fill();
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(this.spin); ctx.fillStyle='#ffe06a'; ctx.fillRect(-2.6,-1,5.2,2); ctx.fillRect(-1,-2.6,2,5.2); ctx.restore();
+  }
+}
+class PopCoin{
+  constructor(tx,ty){ this.x=tx*16+8; this.y=ty*16-2; this.vy=-4.4; this.t=0; this.spin=0; this.dead=false; }
+  update(dt){ this.vy+=0.28; this.y+=this.vy; this.t+=dt; this.spin+=dt*16; if(this.t>0.5) this.dead=true; }
+  draw(){ drawCoin(this.x,this.y,5,this.spin); }
+}
+class Particle{
+  constructor(x,y,vx,vy,o){ this.x=x; this.y=y; this.vx=vx; this.vy=vy; o=o||{}; this.type=o.type||'puff'; this.size=o.size||3; this.life=o.life||0.4; this.max=this.life; this.g=o.g!=null?o.g:0.1; this.color=o.color||'#fff'; this.rot=0; this.rotv=o.rotv||0; this.dead=false; }
+  update(dt){ this.x+=this.vx; this.y+=this.vy; this.vy+=this.g; this.rot+=this.rotv; this.life-=dt; if(this.life<=0) this.dead=true; }
+  draw(){ const a=clamp(this.life/this.max,0,1);
+    if(this.type==='debris'){ ctx.save(); ctx.globalAlpha=a; ctx.translate(this.x,this.y); ctx.rotate(this.rot); ctx.fillStyle=this.color; ctx.fillRect(-this.size/2,-this.size/2,this.size,this.size); ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.fillRect(-this.size/2,this.size/2-1,this.size,1); ctx.restore(); }
+    else if(this.type==='spark'){ ctx.save(); ctx.globalAlpha=a; ctx.fillStyle=this.color; ellipse(this.x,this.y,this.size,this.size); ctx.restore(); }
+    else if(this.type==='confetti'){ ctx.save(); ctx.globalAlpha=a; ctx.translate(this.x,this.y); ctx.rotate(this.rot); ctx.fillStyle=this.color; ctx.fillRect(-this.size/2,-this.size/2,this.size,this.size*0.6); ctx.restore(); }
+    else { ctx.save(); ctx.globalAlpha=a*0.85; ctx.fillStyle=this.color; const s=this.size*(1+(1-a)*1.4); ellipse(this.x,this.y,s,s); ctx.restore(); }
+  }
+}
+class Popup{
+  constructor(x,y,text,color){ this.x=x; this.y=y; this.text=text; this.color=color||'#fff'; this.t=0; this.life=0.85; this.dead=false; }
+  update(dt){ this.y-=20*dt; this.t+=dt; if(this.t>this.life) this.dead=true; }
+  draw(){ const a=clamp(1-(this.t/this.life),0,1); const sc=1+Math.min(this.t*3,0.3);
+    ctx.save(); ctx.globalAlpha=a; ctx.translate(this.x,this.y); ctx.scale(sc,sc);
+    ctx.font='7px "Press Start 2P", monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillText(this.text,0.6,0.6);
+    ctx.fillStyle=this.color; ctx.fillText(this.text,0,0); ctx.restore();
   }
 }
 
-export { collectCoins, cull, doStompBounce, newGame, nextLevel, resolvePlayerEnemies, startClear, startLevel, stompReward, updateCamera, updateClear, updateDying, updateMenu, updateParticlesOnly, updatePlaying };
+class Spiker{
+  constructor(tx,ty){ this.type='spiker'; this.w=14; this.h=14; this.x=tx*16+1; this.y=(ty+1)*16-this.h; this.vx=0; this.vy=0; this.dir=-1; this.dead=false; this.walk=0; }
+  update(dt){
+    this.walk+=dt*6; this.vx=this.dir*0.5; this.vy+=GRAVITY_E; if(this.vy>7)this.vy=7;
+    this._hitL=this._hitR=this._hitD=false; this.onGround=false;
+    collideX(this); if(this._hitL) this.dir=1; if(this._hitR) this.dir=-1;
+    collideY(this,false);
+    if(this.y>game.worldH+80) this.dead=true;
+  }
+  draw(){ const cx=this.x+this.w/2, feet=this.y+this.h;
+    ctx.fillStyle='rgba(0,0,0,0.18)'; ellipse(cx,feet+1.5,this.w*0.5,2.2);
+    const wob=Math.sin(this.walk);
+    ctx.fillStyle='#5a3a86'; ellipse(cx-4.5,feet-1-(wob>0?1:0),3,2.1); ellipse(cx+4.5,feet-1-(wob<0?1:0),3,2.1);
+    ctx.fillStyle='#7a52b0'; rr(ctx,cx-7,feet-11,14,11,5); ctx.fill();
+    ctx.fillStyle='#e8e2f2'; for(let i=-2;i<=2;i++){ const sx=cx+i*3; ctx.beginPath(); ctx.moveTo(sx-2.2,feet-11); ctx.lineTo(sx+2.2,feet-11); ctx.lineTo(sx,feet-16); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle='#fff'; ellipse(cx-3,feet-7,2.2,2.6); ellipse(cx+3,feet-7,2.2,2.6);
+    ctx.fillStyle='#2a1530'; const lk=this.dir*0.7; ellipse(cx-3+lk,feet-6.6,1,1.4); ellipse(cx+3+lk,feet-6.6,1,1.4);
+    ctx.strokeStyle='#4a2e74'; ctx.lineWidth=1; rr(ctx,cx-7,feet-11,14,11,5); ctx.stroke();
+  }
+}
+class Bat{
+  constructor(tx,ty){ this.type='bat'; this.w=14; this.h=12; this.homeX=tx*16+8; this.homeY=(ty+1)*16-10; this.x=this.homeX-this.w/2; this.y=this.homeY-this.h/2; this.vx=0; this.dir=Math.random()<0.5?-1:1; this.t=rand(0,6); this.dead=false; this.flap=0; this.alerted=false; }
+  update(dt){
+    this.t+=dt; this.flap+=dt*16;
+    const p=game.player;
+    this.vx=this.dir*0.85;
+    this._hitL=this._hitR=false; this.onGround=false;
+    collideX(this); if(this._hitL) this.dir=1; if(this._hitR) this.dir=-1;
+    let ty=this.homeY + Math.sin(this.t*2.2)*10;
+    const near = p && Math.abs((p.x+p.w/2)-(this.x+this.w/2))<70;
+    if(near){ ty=lerp(ty, p.y+p.h*0.4, 0.5); if(!this.alerted){ this.alerted=true; sfxBat(); } } else this.alerted=false;
+    this.y += (ty-this.y)*0.08;
+    if(this.y>game.worldH+80) this.dead=true;
+  }
+  draw(){ const cx=this.x+this.w/2, cy=this.y+this.h/2, f=Math.sin(this.flap);
+    ctx.fillStyle='#3a2b4a';
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.quadraticCurveTo(cx-10,cy-6-f*3,cx-12,cy+2+f*2); ctx.quadraticCurveTo(cx-6,cy+1,cx,cy+2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.quadraticCurveTo(cx+10,cy-6-f*3,cx+12,cy+2+f*2); ctx.quadraticCurveTo(cx+6,cy+1,cx,cy+2); ctx.fill();
+    ctx.fillStyle='#5a4570'; ellipse(cx,cy,4,4.4);
+    ctx.fillStyle='#3a2b4a'; ctx.beginPath(); ctx.moveTo(cx-2.5,cy-3.5); ctx.lineTo(cx-1,cy-7); ctx.lineTo(cx+0.2,cy-3.6); ctx.fill(); ctx.beginPath(); ctx.moveTo(cx+2.5,cy-3.5); ctx.lineTo(cx+1,cy-7); ctx.lineTo(cx-0.2,cy-3.6); ctx.fill();
+    ctx.fillStyle='#ffd23a'; ellipse(cx-1.6,cy-0.5,0.9,1.1); ellipse(cx+1.6,cy-0.5,0.9,1.1);
+  }
+}
+class FireBar{
+  constructor(cx,cy){ this.type='firebar'; this.cx=cx; this.cy=cy; this.ang=Math.random()*6.28; this.spd=2.0; this.len=4; this.seg=11; this.rad=5; }
+  update(dt){
+    this.ang+=this.spd*dt;
+    const p=game.player; if(!p||p.dead||p.invinc>0) return;
+    const px=p.x+p.w/2, py=p.y+p.h/2, rr2=this.rad+5;
+    for(let i=1;i<=this.len;i++){ const r=i*this.seg; const fx=this.cx+Math.cos(this.ang)*r, fy=this.cy+Math.sin(this.ang)*r; const dx=px-fx, dy=py-fy; if(dx*dx+dy*dy < rr2*rr2){ p.hurt(); break; } }
+  }
+  draw(){
+    ctx.save(); ctx.globalAlpha=0.9;
+    for(let i=this.len;i>=1;i--){ const r=i*this.seg; const fx=this.cx+Math.cos(this.ang)*r, fy=this.cy+Math.sin(this.ang)*r;
+      ctx.fillStyle='#ff7a1a'; ctx.beginPath(); ctx.arc(fx,fy,this.rad+1.5,0,7); ctx.fill();
+      ctx.fillStyle='#ffd23a'; ctx.beginPath(); ctx.arc(fx,fy,this.rad-1.2,0,7); ctx.fill(); }
+    ctx.restore();
+    ctx.fillStyle='#ffae3a'; ctx.beginPath(); ctx.arc(this.cx,this.cy,4.5,0,7); ctx.fill();
+    ctx.fillStyle='#7a3a16'; ctx.beginPath(); ctx.arc(this.cx,this.cy,2,0,7); ctx.fill();
+  }
+}
+
+export { Bat, Chomper, FireBar, Fireball, Flower, Mushroom, Particle, Player, PopCoin, Popup, Shellback, Spiker, Stomper };
