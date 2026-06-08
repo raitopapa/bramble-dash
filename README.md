@@ -2,10 +2,10 @@ import { initAudioOnce, toggleMute } from '../engine/audio.js';
 
 // ============ INPUT ============
 const input = { left:false,right:false,down:false,jump:false,fire:false,start:false,pause:false };
-const prevIn = { jump:false,fire:false,start:false,pause:false };
-const edge = { jump:false,fire:false,start:false,pause:false };
-function inputBegin(){ edge.jump=input.jump&&!prevIn.jump; edge.fire=input.fire&&!prevIn.fire; edge.start=input.start&&!prevIn.start; edge.pause=input.pause&&!prevIn.pause; }
-function inputEnd(){ prevIn.jump=input.jump; prevIn.fire=input.fire; prevIn.start=input.start; prevIn.pause=input.pause; }
+const prevIn = { left:false,right:false,down:false,jump:false,fire:false,start:false,pause:false };
+const edge = { left:false,right:false,down:false,jump:false,fire:false,start:false,pause:false };
+function inputBegin(){ edge.left=input.left&&!prevIn.left; edge.right=input.right&&!prevIn.right; edge.down=input.down&&!prevIn.down; edge.jump=input.jump&&!prevIn.jump; edge.fire=input.fire&&!prevIn.fire; edge.start=input.start&&!prevIn.start; edge.pause=input.pause&&!prevIn.pause; }
+function inputEnd(){ prevIn.left=input.left; prevIn.right=input.right; prevIn.down=input.down; prevIn.jump=input.jump; prevIn.fire=input.fire; prevIn.start=input.start; prevIn.pause=input.pause; }
 
 window.addEventListener('keydown', e=>{
   initAudioOnce();
