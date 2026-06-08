@@ -1,0 +1,19 @@
+const TILE = 16;
+const GRAVITY = 0.42, HOLD_G = 0.22, JUMP_V = 5.0, MAXFALL = 7.6;
+const GRAVITY_E = 0.4;
+const COYOTE = 7, JBUF = 7, INVINC = 1.6, GROWANIM = 0.5;
+const BASE_VIEW_H = 232;
+const STEP = 1/60;
+
+const THEMES = {
+  overworld:{ cave:false, skyTop:'#74bcff', skyBot:'#cfeeff',
+    hill:'#62c451', hillDark:'#3aa336', bush:'#57c84d', bushDark:'#3aa336', bushLight:'#86e07a',
+    grass:'#5fc24a', grassDark:'#3aa336', soil:'#c8743a', soilDark:'#9c5424', soilEdge:'#a85f2e',
+    brick:'#c8612f', brickLine:'#7a3413', stone:'#bcc3cf', stoneDark:'#8a93a3', used:'#b07a3a', usedDark:'#6e4a1f' },
+  cave:{ cave:true, skyTop:'#0a1230', skyBot:'#16285a',
+    hill:'#1b2b55', hillDark:'#122142', bush:'#23406e', bushDark:'#16294a', bushLight:'#365a96',
+    grass:'#5a7aa0', grassDark:'#3a516e', soil:'#3c4d6c', soilDark:'#27344b', soilEdge:'#48597c',
+    brick:'#566b8a', brickLine:'#2c3a52', stone:'#566b8a', stoneDark:'#34465f', used:'#445574', usedDark:'#2a374e' }
+};
+
+export { BASE_VIEW_H, COYOTE, GRAVITY, GRAVITY_E, GROWANIM, HOLD_G, INVINC, JBUF, JUMP_V, MAXFALL, STEP, THEMES, TILE };
