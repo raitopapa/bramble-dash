@@ -105,6 +105,92 @@ function buildLevel3(){
   stairUp(g,168,4,gy);
   return finalize(g,{theme:'cave',time:320,name:'2-1',spawnTX:3,gy,goalTX:190,goalGroundY:gy,goalPoleTopY:4,seed:77});
 }
-const LEVELS=[buildLevel1, buildLevel2, buildLevel3];
+function buildLevel4(){
+  // 2-2 : Underground (cave). Ceiling + stalactites, raised stone, piranha pipes.
+  const W=212,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
+  for(let x=0;x<W;x++){ g.set(x,gy,'S'); g.set(x,gy+1,'S'); g.set(x,0,'S'); g.set(x,1,'S'); }
+  const pit=(x,w)=>{ for(let i=0;i<w;i++){ g.set(x+i,gy,' '); g.set(x+i,gy+1,' '); } };
+  const stal=(x,len)=>{ for(let j=0;j<len;j++) g.set(x,2+j,'S'); };
+  const ped=(x,n,w)=>{ for(let i=0;i<w;i++) for(let j=0;j<n;j++) g.set(x+i,gy-1-j,'S'); };
+  stal(6,3); stal(7,2); stal(15,4); stal(16,3);
+  g.set(10,9,'?'); g.set(12,9,'!');
+  g.set(14,gy-1,'k');
+  pit(22,3);
+  ped(28,2,3); g.set(28,9,'o'); g.set(29,9,'o'); g.set(30,9,'o'); g.set(31,gy-1,'g');
+  stal(36,5); stal(38,3);
+  pipe(g,44,3,gy); g.set(44,gy-4,'c');
+  pit(52,4);
+  row(g,60,8,4,'S'); g.set(61,7,'o'); g.set(62,7,'o'); g.set(63,7,'?');
+  stal(68,4);
+  g.set(72,gy-1,'k'); g.set(76,gy-1,'g');
+  pit(82,4);
+  ped(90,3,2); ped(95,2,2); g.set(90,8,'o'); g.set(91,8,'o'); g.set(95,9,'o');
+  stal(100,5); stal(102,3);
+  pipe(g,108,2,gy); g.set(108,gy-3,'c');
+  pit(116,3);
+  row(g,124,7,3,'B'); g.set(126,7,'!');
+  g.set(132,gy-1,'k');
+  stal(138,4); stal(140,5);
+  pit(146,4);
+  row(g,154,6,5,'S'); g.set(155,5,'o'); g.set(156,5,'o'); g.set(157,5,'o'); g.set(156,gy-1,'g');
+  stal(163,4);
+  ped(170,2,2); ped(174,3,2); ped(178,4,2);
+  stairUp(g,186,4,gy);
+  return finalize(g,{theme:'cave',time:340,name:'2-2',spawnTX:3,gy,goalTX:202,goalGroundY:gy,goalPoleTopY:4,seed:123});
+}
+function buildLevel5(){
+  // 3-1 : Sky athletic. Floating islands over a void (falling = death).
+  const W=212,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
+  const isle=(x,w)=>{ for(let i=0;i<w;i++){ g.set(x+i,gy,'X'); g.set(x+i,gy+1,'X'); } };
+  const plat=(x,y,w)=>{ for(let i=0;i<w;i++) g.set(x+i,y,'X'); };
+  isle(0,8);
+  g.set(3,9,'?'); g.set(5,9,'o');
+  const spots=[];
+  for(let x=12; x<=156; x+=9){ isle(x,5); spots.push(x); }
+  isle(164,44);                       // big final island carries the goal
+  for(let i=0;i<spots.length;i++){ const sx=spots[i], m=i%4;
+    if(i===5){ g.set(sx+2,9,'!'); }
+    else if(m===0){ g.set(sx+1,9,'o'); g.set(sx+2,8,'o'); g.set(sx+3,9,'o'); }
+    else if(m===1){ plat(sx+6,8,3); g.set(sx+7,7,'o'); }
+    else if(m===2){ g.set(sx+2,gy-1,'k'); }
+    else { g.set(sx+2,9,'?'); }
+  }
+  g.set(176,9,'?'); g.set(178,9,'o'); g.set(180,8,'o'); g.set(184,gy-1,'g');
+  return finalize(g,{theme:'sky',time:320,name:'3-1',spawnTX:3,gy,goalTX:196,goalGroundY:gy,goalPoleTopY:3,seed:321});
+}
+function buildLevel6(){
+  // 3-2 : Castle. Stone & breakable brick, battlements, piranha pipes, harder.
+  const W=218,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
+  for(let x=0;x<W;x++){ g.set(x,gy,'S'); g.set(x,gy+1,'S'); }
+  const pit=(x,w)=>{ for(let i=0;i<w;i++){ g.set(x+i,gy,' '); g.set(x+i,gy+1,' '); } };
+  const pillar=(x,n)=>{ for(let j=0;j<n;j++) g.set(x,gy-1-j,'S'); };
+  g.set(8,9,'B'); g.set(9,9,'?'); g.set(10,9,'B'); g.set(11,9,'!'); g.set(12,9,'B');
+  g.set(15,gy-1,'k');
+  pillar(19,3); pillar(20,3); g.set(19,8,'o'); g.set(20,8,'o');
+  pit(26,3);
+  row(g,32,8,5,'B'); g.set(34,8,'?'); g.set(33,7,'o'); g.set(35,7,'o');
+  g.set(40,gy-1,'g');
+  pipe(g,46,3,gy); g.set(46,gy-4,'c');
+  pit(54,4);
+  pillar(60,2); pillar(61,4); pillar(62,4); pillar(63,2); g.set(61,8,'o'); g.set(62,8,'o');
+  g.set(70,gy-1,'k'); g.set(73,gy-1,'k');
+  row(g,80,8,4,'B'); g.set(82,8,'!'); g.set(81,7,'o');
+  pit(88,4);
+  pipe(g,96,2,gy); g.set(96,gy-3,'c');
+  stairUp(g,102,4,gy); stairDown(g,110,4,gy);
+  g.set(118,gy-1,'g');
+  pillar(124,3); pillar(125,3); g.set(124,8,'o'); g.set(125,8,'o');
+  pit(132,5);
+  row(g,140,6,3,'B'); g.set(142,6,'?'); g.set(141,5,'o');
+  g.set(148,gy-1,'k');
+  pipe(g,154,3,gy); g.set(154,gy-4,'c');
+  pit(162,4);
+  row(g,170,8,5,'S'); g.set(171,7,'o'); g.set(173,7,'o');
+  pillar(180,2); pillar(181,3); pillar(182,4);
+  g.set(188,gy-1,'g'); g.set(191,gy-1,'k');
+  stairUp(g,196,4,gy);
+  return finalize(g,{theme:'castle',time:360,name:'3-2',spawnTX:3,gy,goalTX:210,goalGroundY:gy,goalPoleTopY:3,seed:222});
+}
+const LEVELS=[buildLevel1, buildLevel2, buildLevel3, buildLevel4, buildLevel5, buildLevel6];
 
-export { Grid, LEVELS, buildLevel1, buildLevel2, buildLevel3, finalize, makeDecor, pipe, row, stairDown, stairUp };
+export { Grid, LEVELS, buildLevel1, buildLevel2, buildLevel3, buildLevel4, buildLevel5, buildLevel6, finalize, makeDecor, pipe, row, stairDown, stairUp };

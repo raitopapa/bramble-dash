@@ -3,11 +3,14 @@
 // When adding stages: append a level to content/levels.js AND a node here.
 
 const MAP_NODES = [
-  { nx: 0.12, ny: 0.66, name: '1-1' },
-  { nx: 0.30, ny: 0.45, name: '1-2' },
-  { nx: 0.50, ny: 0.64, name: '2-1' },
+  { nx: 0.10, ny: 0.66, name: '1-1' },
+  { nx: 0.22, ny: 0.45, name: '1-2' },
+  { nx: 0.35, ny: 0.63, name: '2-1' },
+  { nx: 0.50, ny: 0.44, name: '2-2' },
+  { nx: 0.64, ny: 0.62, name: '3-1' },
+  { nx: 0.78, ny: 0.43, name: '3-2' },
 ];
 
-const MAP_PATHS = [[0, 1], [1, 2]];
+const MAP_PATHS = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]];
 
 export { MAP_NODES, MAP_PATHS };
