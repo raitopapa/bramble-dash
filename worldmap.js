@@ -5,10 +5,10 @@ import { startLevel } from '../game/flow.js';
 import { MAP_NODES } from '../content/worldmap.js';
 import { drawCreature } from '../draw/creatures.js';
 import { animClock } from '../engine/loop.js';
-import { sfxCoin, sfxJump } from '../engine/audio.js';
+import { sfxCoin, sfxJump, setMusicTrack } from '../engine/audio.js';
 
 class WorldMapScene{
-  enter(){ this.t=0; this.vx=null; this.vy=null; }
+  enter(){ this.t=0; this.vx=null; this.vy=null; setMusicTrack('map'); }
   nodePos(i){ const n=MAP_NODES[i]; return { x:n.nx*canvas.width, y:n.ny*canvas.height }; }
   unlocked(i){ return i <= (game.mapMaxUnlocked|0); }
   update(dt){

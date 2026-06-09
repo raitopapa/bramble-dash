@@ -1,6 +1,6 @@
-import { THEMES } from '../core/constants.js';
+import { DIFFICULTY, SPRING_V, THEMES } from '../core/constants.js';
 import { rand } from '../core/utils.js';
-import { sfx1up, sfxBreak, sfxBump, sfxCoin, sfxSprout } from '../engine/audio.js';
+import { sfx1up, sfxBreak, sfxBump, sfxCoin, sfxSpring, sfxSprout } from '../engine/audio.js';
 import { Fireball, Flower, Mushroom, Particle, PopCoin, Popup } from './entities.js';
 
 // ============ GAME STATE ============
@@ -11,13 +11,15 @@ const game = {
   camX:0, camY:0,
   score:0, coins:0, lives:3, time:300,
   enemies:[], items:[], fireballs:[], particles:[], popups:[], popcoins:[], bumps:[],
+  hazards:[], crumbles:[], platforms:[], checkpoints:[], checkpointX:0,
   player:null,
   cleared:false, clearPhase:null, clearTimer:0, holdT:0, fanfarePlayed:false,
   deathTimer:0, confetti:[],
-  mapNode:0, mapMaxUnlocked:0, mapCleared:[]
+  mapNode:0, mapMaxUnlocked:0, mapCleared:[],
+  difficulty:0, diff:DIFFICULTY[0]
 };
 
-const SOLID = new Set(['X','S','B','?','!','U','P']);
+const SOLID = new Set(['X','S','B','?','!','U','P','T','D']);
 function isSolidCh(c){ return SOLID.has(c); }
 function solidTile(tx,ty){
   if(ty<0) return false;
@@ -38,7 +40,10 @@ function collideY(e,isPlayer){
   e.y += e.vy;
   const left=Math.floor(e.x/16), right=Math.floor((e.x+e.w-1)/16);
   if(e.vy>0){ const ty=Math.floor((e.y+e.h-1)/16);
-    for(let tx=left;tx<=right;tx++){ if(solidTile(tx,ty)){ e.y=ty*16-e.h; e.vy=0; e.onGround=true; e._hitD=true; break; } }
+    for(let tx=left;tx<=right;tx++){ if(solidTile(tx,ty)){ e.y=ty*16-e.h;
+        if(isPlayer && game.grid.c[ty][tx]==='T'){ e.vy=-SPRING_V; e.onGround=false; e._hitD=false; sfxSpring(); spawnDust(e.x+e.w/2,e.y+e.h); }
+        else { e.vy=0; e.onGround=true; e._hitD=true; }
+        break; } }
   } else if(e.vy<0){ const ty=Math.floor(e.y/16); const hits=[];
     for(let tx=left;tx<=right;tx++){ if(solidTile(tx,ty)) hits.push(tx); }
     if(hits.length){ e.y=(ty+1)*16; e.vy=0; e._hitU=true;
@@ -55,6 +60,7 @@ function spawnFireball(p){ const x = p.facing>0? p.x+p.w : p.x-8; game.fireballs
 function countFB(){ let n=0; for(const f of game.fireballs) if(!f.dead) n++; return n; }
 function bumpAnim(tx,ty){ game.bumps.push({tx,ty,t:0,dur:0.16}); }
 function bumpOffset(tx,ty){ for(const b of game.bumps){ if(b.tx===tx&&b.ty===ty) return Math.sin((b.t/b.dur)*Math.PI)*5; } return 0; }
+function crumbleOffset(tx,ty){ for(const c of game.crumbles){ if(c.tx===tx&&c.ty===ty) return Math.sin(c.t*45)*1.4; } return 0; }
 function bumpBlock(tx,ty){
   const ch=gget(tx,ty);
   if(ch==='?'||ch==='!'){
@@ -74,6 +80,7 @@ function bumpEnemiesAbove(tx,ty){
     if(e.x+e.w>x0 && e.x<x1 && feet>=topY-6 && feet<=topY+8){
       if(e.type==='stomper'){ killEnemy(e); addScore(100); popupWorld(e.x,e.y-4,'100'); }
       else if(e.type==='shellback'){ e.toShell(); addScore(100); popupWorld(e.x,e.y-4,'100'); }
+      else if(e.type==='spiker'||e.type==='bat'){ killEnemy(e); addScore(100); popupWorld(e.x,e.y-4,'100'); }
       e.vy=-2.6;
     }
   }
@@ -85,4 +92,4 @@ function spawnBrickDebris(tx,ty){ const cx=tx*16+8, cy=ty*16+8, c=game.theme.bri
 function spawnSpark(x,y,color){ for(let i=0;i<5;i++){ const a=Math.random()*Math.PI*2, s=rand(0.6,2); game.particles.push(new Particle(x,y,Math.cos(a)*s,Math.sin(a)*s-0.6,{type:'spark', size:rand(1,2), life:rand(0.25,0.45), g:0.08, color:color||'#ffe79a'})); } }
 function spawnPopCoin(tx,ty){ game.popcoins.push(new PopCoin(tx,ty)); }
 
-export { SOLID, addCoin, addScore, bumpAnim, bumpBlock, bumpEnemiesAbove, bumpOffset, collideX, collideY, countFB, game, gget, gset, isSolidCh, killEnemy, popupWorld, solidTile, spawnBrickDebris, spawnDust, spawnFireball, spawnItem, spawnPopCoin, spawnPuff, spawnSpark };
+export { SOLID, addCoin, addScore, bumpAnim, bumpBlock, bumpEnemiesAbove, bumpOffset, collideX, collideY, countFB, crumbleOffset, game, gget, gset, isSolidCh, killEnemy, popupWorld, solidTile, spawnBrickDebris, spawnDust, spawnFireball, spawnItem, spawnPopCoin, spawnPuff, spawnSpark };

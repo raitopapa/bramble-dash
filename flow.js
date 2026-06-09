@@ -1,20 +1,16 @@
-import { edge, inputBegin, inputEnd } from '../core/input.js';
-import { renderStage } from '../draw/render.js';
-import { duckMusic, sfxPause } from '../engine/audio.js';
-import { updateClear, updateDying, updateMenu, updateParticlesOnly, updatePlaying } from '../game/flow.js';
-import { game } from '../game/state.js';
+import { canvas, ctx } from '../engine/canvas.js';
 
-class StageScene{
-  update(dt){
-    inputBegin();
-    if(game.state==='gameover'||game.state==='win') updateMenu(dt);
-    else if(game.state==='paused'){ if(edge.pause||edge.start){ game.state='playing'; duckMusic(1); sfxPause(); } }
-    else if(game.state==='playing') updatePlaying(dt);
-    else if(game.state==='dying'){ updateDying(dt); updateParticlesOnly(dt); }
-    else if(game.state==='levelclear'){ updateClear(dt); updateParticlesOnly(dt); }
-    inputEnd();
+class BossScene{
+  update(dt){}
+  render(){
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.fillStyle='#10183a'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#cfe0ff'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font=Math.round(canvas.height*0.05)+'px "Press Start 2P", monospace';
+    ctx.fillText('BOSS', canvas.width/2, canvas.height*0.42);
+    ctx.font=Math.round(canvas.height*0.03)+'px "Press Start 2P","Hiragino Maru Gothic ProN",sans-serif';
+    ctx.fillText('準備中', canvas.width/2, canvas.height*0.56);
   }
-  render(){ renderStage(); }
 }
 
-export { StageScene };
+export { BossScene };
