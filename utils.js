@@ -41,13 +41,14 @@ class Player{
     if(this.vx>maxS && onG && dir>=0) this.vx=Math.max(maxS,this.vx-0.08);
     if(this.vx<-maxS && onG && dir<=0) this.vx=Math.min(-maxS,this.vx+0.08);
     this.vx=clamp(this.vx,-maxRun,maxRun);
-    if(onG) this.coyote=COYOTE; else if(this.coyote>0) this.coyote--;
-    if(edge.jump) this.jumpBuffer=JBUF; else if(this.jumpBuffer>0) this.jumpBuffer--;
-    if(this.jumpBuffer>0 && (onG||this.coyote>0)){ this.vy=-JUMP_V; this.onGround=false; this.coyote=0; this.jumpBuffer=0; this.jumping=true; sfxJump(); spawnDust(this.x+this.w/2,this.y+this.h); }
+    const D=game.diff||{};
+    if(onG) this.coyote=COYOTE*(D.coyoteMul||1); else if(this.coyote>0) this.coyote--;
+    if(edge.jump) this.jumpBuffer=JBUF*(D.bufferMul||1); else if(this.jumpBuffer>0) this.jumpBuffer--;
+    if(this.jumpBuffer>0 && (onG||this.coyote>0)){ this.vy=-JUMP_V*(D.jumpMul||1); this.onGround=false; this.coyote=0; this.jumpBuffer=0; this.jumping=true; sfxJump(); spawnDust(this.x+this.w/2,this.y+this.h); }
     this.jumpHeld=input.jump;
-    if(this.vy<0 && !this.jumpHeld && this.jumping){ this.vy*=0.45; this.jumping=false; }
-    const g=(this.vy<0 && this.jumpHeld)?HOLD_G:GRAVITY;
-    this.vy+=g; if(this.vy>MAXFALL) this.vy=MAXFALL;
+    if(this.vy<0 && !this.jumpHeld && this.jumping){ this.vy*=(D.cutKeep!=null?D.cutKeep:0.45); this.jumping=false; }
+    const g=((this.vy<0 && this.jumpHeld)?HOLD_G:GRAVITY)*(D.gravityMul||1);
+    this.vy+=g; const mf=MAXFALL*(D.fallMul||1); if(this.vy>mf) this.vy=mf;
     this._hitL=this._hitR=this._hitU=this._hitD=false; this.onGround=false;
     collideX(this); collideY(this,true);
     if(this._hitD) this.jumping=false;
