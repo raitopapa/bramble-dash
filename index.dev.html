@@ -7,22 +7,26 @@ const STEP = 1/60;
 const SPRING_V = 8.7;
 
 const THEMES = {
-  overworld:{ cave:false, skyTop:'#74bcff', skyBot:'#cfeeff',
-    hill:'#62c451', hillDark:'#3aa336', bush:'#57c84d', bushDark:'#3aa336', bushLight:'#86e07a',
-    grass:'#5fc24a', grassDark:'#3aa336', soil:'#c8743a', soilDark:'#9c5424', soilEdge:'#a85f2e',
-    brick:'#c8612f', brickLine:'#7a3413', stone:'#bcc3cf', stoneDark:'#8a93a3', used:'#b07a3a', usedDark:'#6e4a1f' },
-  cave:{ cave:true, skyTop:'#0a1230', skyBot:'#16285a',
-    hill:'#1b2b55', hillDark:'#122142', bush:'#23406e', bushDark:'#16294a', bushLight:'#365a96',
-    grass:'#5a7aa0', grassDark:'#3a516e', soil:'#3c4d6c', soilDark:'#27344b', soilEdge:'#48597c',
-    brick:'#566b8a', brickLine:'#2c3a52', stone:'#566b8a', stoneDark:'#34465f', used:'#445574', usedDark:'#2a374e' },
-  sky:{ cave:false, skyTop:'#4aa6ff', skyBot:'#dff1ff',
-    hill:'#9adfe8', hillDark:'#6fc6d6', bush:'#86e07a', bushDark:'#5fc24a', bushLight:'#b6f0a8',
-    grass:'#6fce5a', grassDark:'#3aa336', soil:'#d2ab6e', soilDark:'#a07c4a', soilEdge:'#bd935c',
-    brick:'#d0894a', brickLine:'#8a4f1f', stone:'#dfe6f2', stoneDark:'#aab3c3', used:'#b07a3a', usedDark:'#6e4a1f' },
-  castle:{ cave:true, skyTop:'#241019', skyBot:'#3a1822',
-    hill:'#2e1a26', hillDark:'#1e1018', bush:'#3a2230', bushDark:'#281620', bushLight:'#4a2c3c',
-    grass:'#7a4a4a', grassDark:'#5a2e2e', soil:'#5a4550', soilDark:'#382830', soilEdge:'#6a5560',
-    brick:'#8a3a3a', brickLine:'#561e1e', stone:'#6a5560', stoneDark:'#463640', used:'#5a4550', usedDark:'#382830' }
+  overworld:{ cave:false, skyTop:'#7ec3ff', skyMid:'#aadfff', skyBot:'#e9f8ff', glow:'rgba(255,246,200,0.9)', accent:'#ffd23a',
+    mountain:'#8fd6a6', mountainDark:'#69bd88',
+    hill:'#5dc24f', hillDark:'#3a9e36', bush:'#54c44a', bushDark:'#379a33', bushLight:'#88e57c',
+    grass:'#5fc24a', grassDark:'#3aa336', soil:'#cf7a40', soilDark:'#9c5424', soilEdge:'#b06432',
+    brick:'#cc6633', brickLine:'#7a3413', stone:'#c4cbd8', stoneDark:'#8a93a3', used:'#b07a3a', usedDark:'#6e4a1f' },
+  cave:{ cave:true, skyTop:'#0a1330', skyMid:'#15264c', skyBot:'#21386a', glow:'rgba(90,150,230,0.5)', accent:'#7fe0ff',
+    mountain:'#1a2c52', mountainDark:'#101f3e',
+    hill:'#1b2b55', hillDark:'#122142', bush:'#23406e', bushDark:'#16294a', bushLight:'#3a5e9a',
+    grass:'#5a7aa0', grassDark:'#3a516e', soil:'#3c4d6c', soilDark:'#27344b', soilEdge:'#4a5d80',
+    brick:'#56678a', brickLine:'#2c3a52', stone:'#56678a', stoneDark:'#34465f', used:'#445574', usedDark:'#2a374e' },
+  sky:{ cave:false, skyTop:'#ffd8ac', skyMid:'#eab4df', skyBot:'#c3ebff', glow:'rgba(255,240,205,0.95)', accent:'#ffd23a',
+    mountain:'#d2e6ff', mountainDark:'#b4ccef',
+    hill:'#c4efe0', hillDark:'#97dcc6', bush:'#9fe99b', bushDark:'#6fce5a', bushLight:'#caf6bf',
+    grass:'#8fe07a', grassDark:'#5fc24a', soil:'#e6ca9c', soilDark:'#c2a06e', soilEdge:'#d6b888',
+    brick:'#e0a566', brickLine:'#a86a2f', stone:'#eef2fb', stoneDark:'#c4ccdd', used:'#d6b07a', usedDark:'#9c7a4a' },
+  castle:{ cave:true, skyTop:'#241033', skyMid:'#46163e', skyBot:'#67204a', glow:'rgba(255,120,150,0.6)', accent:'#ffb14d',
+    mountain:'#2a132f', mountainDark:'#1b0c20',
+    hill:'#2e1a2e', hillDark:'#1e1020', bush:'#3a2236', bushDark:'#281624', bushLight:'#4c2e44',
+    grass:'#7a4a5a', grassDark:'#5a2e3a', soil:'#4a3548', soilDark:'#2e2030', soilEdge:'#5c4658',
+    brick:'#8c3a4a', brickLine:'#561e2a', stone:'#5a4658', stoneDark:'#382838', used:'#4a3548', usedDark:'#2e2030' }
 };
 
 const DIFFICULTY = [
