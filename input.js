@@ -11,7 +11,7 @@ const game = {
   camX:0, camY:0,
   score:0, coins:0, lives:3, time:300,
   enemies:[], items:[], fireballs:[], particles:[], popups:[], popcoins:[], bumps:[],
-  hazards:[], crumbles:[], platforms:[], checkpoints:[], checkpointX:0,
+  hazards:[], crumbles:[], platforms:[], checkpoints:[], checkpointX:0, boss:null, bossWinTimer:0,
   player:null,
   cleared:false, clearPhase:null, clearTimer:0, holdT:0, fanfarePlayed:false,
   deathTimer:0, confetti:[],

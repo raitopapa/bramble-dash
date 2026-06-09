@@ -212,6 +212,15 @@ function buildLevel6(){
   return finalize(g,{theme:'castle',time:360,name:'3-2',spawnTX:3,gy,goalTX:210,goalGroundY:gy,goalPoleTopY:3,seed:222,
     platforms:[{tx:131,ty:11,w:3,axis:'h',range:3,speed:0.9}]});
 }
-const LEVELS=[buildLevel1, buildLevel2, buildLevel3, buildLevel4, buildLevel5, buildLevel6];
+function buildLevel7(){
+  // Boss arena: an enclosed castle hall. Stomp the boss 3 times (or hit with fireballs) to win.
+  const W=34,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
+  for(let x=0;x<W;x++){ g.set(x,gy,'S'); g.set(x,gy+1,'S'); }
+  for(let y=0;y<gy;y++){ g.set(0,y,'S'); g.set(1,y,'S'); g.set(W-2,y,'S'); g.set(W-1,y,'S'); }
+  for(let y=2;y<gy;y+=2){ g.set(2,y,'o'); g.set(W-3,y,'o'); }   // little coin columns by the walls
+  g.set(18,gy-1,'O');                                            // the boss
+  return finalize(g,{theme:'castle',time:400,name:'ボス',spawnTX:3,gy,goalTX:W+3,goalGroundY:gy,goalPoleTopY:3,seed:777});
+}
+const LEVELS=[buildLevel1, buildLevel2, buildLevel3, buildLevel4, buildLevel5, buildLevel6, buildLevel7];
 
-export { Grid, LEVELS, buildLevel1, buildLevel2, buildLevel3, buildLevel4, buildLevel5, buildLevel6, finalize, makeDecor, pipe, row, stairDown, stairUp };
+export { Grid, LEVELS, buildLevel1, buildLevel2, buildLevel3, buildLevel4, buildLevel5, buildLevel6, buildLevel7, finalize, makeDecor, pipe, row, stairDown, stairUp };

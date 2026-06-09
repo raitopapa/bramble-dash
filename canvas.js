@@ -42,6 +42,11 @@ function drawTile(c,tx,ty,th){ const x=tx*16; const yy=ty*16-bumpOffset(tx,ty); 
     case 'D': drawCrumble(x+sx,yy,th); break;
   }
 }
+function drawBossHP(){ const b=game.boss, H=canvas.height, W=canvas.width; const n=b.maxhp, r=Math.max(6,H*0.02), gap=r*2.7, total=(n-1)*gap, x0=W/2-total/2, y=H*0.085;
+  ctx.font=Math.round(H*0.026)+'px "Press Start 2P","Hiragino Maru Gothic ProN",sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillText('ボス',W/2+1,y-r*2.0+1); ctx.fillStyle='#ffd34d'; ctx.fillText('ボス',W/2,y-r*2.0);
+  for(let i=0;i<n;i++){ const x=x0+i*gap, on=i<b.hp; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fillStyle=on?'#ff5d6c':'rgba(255,255,255,0.16)'; ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle=on?'#7e0d1a':'rgba(0,0,0,0.35)'; ctx.stroke(); if(on){ ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(x-r*0.3,y-r*0.3,r*0.28,0,7); ctx.fill(); } }
+}
 function drawCheckpoint(cp){ const x=cp.x, baseY=cp.y+16, topY=cp.y-32, t=animClock;
   ctx.strokeStyle='#9aa3b3'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x,baseY); ctx.lineTo(x,topY); ctx.stroke();
   ctx.fillStyle='#cfd6e2'; ctx.beginPath(); ctx.arc(x,topY,3,0,7); ctx.fill();
@@ -157,12 +162,14 @@ function renderStage(){
   for(const it of game.items) it.draw();
   for(const hz of game.hazards) hz.draw();
   for(const e of game.enemies) e.draw();
+  if(game.boss) game.boss.draw();
   for(const f of game.fireballs) f.draw();
   for(const p of game.particles) p.draw();
   if(game.player) game.player.draw();
   for(const pc of game.popcoins) pc.draw();
   for(const pu of game.popups) pu.draw();
   ctx.setTransform(1,0,0,1,0,0); drawHUD();
+  if(game.boss && !game.boss.dead) drawBossHP();
   if(game.state==='paused') drawPause();
   else if(game.state==='levelclear') drawClearOverlay();
   else if(game.state==='gameover') drawGameOver();

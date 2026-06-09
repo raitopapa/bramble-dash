@@ -4,7 +4,7 @@ import { edge, input } from '../core/input.js';
 import { aabb, clamp, lerp, rand } from '../core/utils.js';
 import { duckMusic, setMusicTrack, sfx1up, sfxClear, sfxCoin, sfxCrumble, sfxFlag, sfxFlagDn, sfxKick, sfxPause, sfxStomp, sfxTick, sfxWin } from '../engine/audio.js';
 import { camH, camW, canvas } from '../engine/canvas.js';
-import { Bat, Chomper, FireBar, MovingPlatform, Particle, Player, Shellback, Spiker, Stomper } from './entities.js';
+import { Bat, Boss, Chomper, FireBar, MovingPlatform, Particle, Player, Shellback, Spiker, Stomper } from './entities.js';
 import { addCoin, addScore, collideX, collideY, game, gget, gset, killEnemy, popupWorld, spawnBrickDebris, spawnPuff, spawnSpark } from './state.js';
 
 // ============ GAME FLOW ============
@@ -17,7 +17,7 @@ function startLevel(idx, respawn){
   game.levelIndex=idx; game.level=lvl; game.grid=lvl.grid; game.theme=lvl.theme;
   game.worldW=lvl.grid.w*16; game.worldH=lvl.grid.h*16;
   game.goalX=lvl.goalX; game.goalGroundY=lvl.goalGroundY; game.goalPoleTop=lvl.goalPoleTop;
-  game.enemies=[]; game.items=[]; game.fireballs=[]; game.particles=[]; game.popups=[]; game.popcoins=[]; game.bumps=[]; game.hazards=[]; game.crumbles=[]; game.platforms=[]; game.checkpoints=[];
+  game.enemies=[]; game.items=[]; game.fireballs=[]; game.particles=[]; game.popups=[]; game.popcoins=[]; game.bumps=[]; game.hazards=[]; game.crumbles=[]; game.platforms=[]; game.checkpoints=[]; game.boss=null; game.bossWinTimer=0;
   const g=lvl.grid;
   for(let y=0;y<g.h;y++) for(let x=0;x<g.w;x++){ const c=g.c[y][x];
     if(c==='g'){ game.enemies.push(new Stomper(x,y)); g.c[y][x]=' '; }
@@ -27,6 +27,7 @@ function startLevel(idx, respawn){
     else if(c==='b'){ game.enemies.push(new Bat(x,y)); g.c[y][x]=' '; }
     else if(c==='F'){ game.hazards.push(new FireBar(x*16+8, y*16+8)); g.c[y][x]='S'; }
     else if(c==='H'){ game.checkpoints.push({x:x*16+8, y:y*16, active:false}); g.c[y][x]=' '; }
+    else if(c==='O'){ game.boss=new Boss(x,y); g.c[y][x]=' '; }
   }
   game.platforms = (lvl.platforms||[]).map(d=>new MovingPlatform(d));
   if(!respawn) game.checkpointX = lvl.spawnX;
@@ -41,6 +42,7 @@ function startLevel(idx, respawn){
   game.state='playing'; duckMusic(1);
 }
 function nextLevel(){ const idx=game.levelIndex; if(game.mapCleared) game.mapCleared[idx]=true; const ni=idx+1; if(ni>=LEVELS.length){ game.state='win'; duckMusic(0); sfxWin(); } else { game.mapMaxUnlocked=Math.max(game.mapMaxUnlocked|0, ni); game.mapNode=ni; game.state='worldmap'; setMusicTrack('map'); duckMusic(1); } saveProgress(); }
+function bossDefeated(){ const b=game.boss; game.bossWinTimer=1.8; addScore(3000); popupWorld(b.x+b.w/2,b.y-18,'3000','#ffd34d'); const cs=['#ffd34d','#9effa0','#7cc0ff','#ff9ad2']; for(let i=0;i<26;i++) game.particles.push(new Particle(b.x+b.w/2,b.y+b.h/2, rand(-3,3), rand(-4.5,-0.5), {type:'spark', size:rand(2,3.5), life:rand(0.5,0.95), g:0.12, color:cs[i%cs.length]})); }
 function startClear(){ game.state='levelclear'; game.cleared=true; game.clearPhase='slide'; const p=game.player; p.onPole=true; p.x=game.goalX-p.w/2; p.vx=0; p.vy=0; game.fanfarePlayed=false; game.holdT=0; duckMusic(0); sfxFlag(); }
 function updateClear(dt){
   const p=game.player;
@@ -98,6 +100,19 @@ function updatePlaying(dt){
   for(const e of game.enemies){ if(e.dead)continue; if(e.type==='shellback'&&e.state==='slide'){ for(const o of game.enemies){ if(o===e||o.dead||(o.squash&&o.squash>0)||o.type==='chomper')continue; if(aabb(e,o)){ killEnemy(o); addScore(200); popupWorld(o.x,o.y-4,'200'); sfxKick(); } } } }
   resolvePlayerEnemies();
   if(game.state!=='playing') return;
+  if(game.boss){ const b=game.boss; b.update(dt);
+    if(!b.dead){
+      if(aabb(p,b)){ const fromAbove = p.vy>0.5 && (p.y+p.h)-b.y < b.h*0.6;
+        if(fromAbove){ const r=b.hit(); doStompBounce(); if(r===2) bossDefeated(); else if(r===1){ addScore(500); popupWorld(b.x+b.w/2,b.y-6,'500'); } }
+        else if(b.invuln<=0){ p.hurt(); if(p.dead) return; }
+      }
+      for(const fb of game.fireballs){ if(fb.dead)continue; if(aabb(fb,b)){ const r=b.hit(); fb.dead=true; spawnSpark(fb.x,fb.y,'#ffae3a'); if(r===2) bossDefeated(); } }
+    } else {
+      game.bossWinTimer-=dt;
+      if(game.bossWinTimer<=0 && game.state==='playing'){ game.state='levelclear'; game.cleared=true; game.clearPhase='tally'; game.clearTimer=0; game.holdT=0; if(!game.fanfarePlayed){ sfxClear(); game.fanfarePlayed=true; } duckMusic(0); }
+    }
+  }
+  if(game.state!=='playing') return;
   for(const hz of game.hazards) hz.update(dt);
   if(game.state!=='playing') return;
   // crumbling platforms: stand on a 'D' tile -> it shakes then drops
@@ -111,7 +126,7 @@ function updatePlaying(dt){
   for(const b of game.bumps) b.t+=dt; game.bumps=game.bumps.filter(b=>b.t<b.dur);
   updateParticlesOnly(dt);
   updateCamera();
-  if(!game.cleared && (p.x+p.w/2)>=game.goalX) startClear();
+  if(!game.boss && !game.cleared && (p.x+p.w/2)>=game.goalX) startClear();
   cull();
 }
 function updateMenu(dt){
