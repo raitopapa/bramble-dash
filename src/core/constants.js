@@ -1,0 +1,43 @@
+const TILE = 16;
+const GRAVITY = 0.42, HOLD_G = 0.22, JUMP_V = 5.0, MAXFALL = 7.6;
+const GRAVITY_E = 0.4;
+const COYOTE = 7, JBUF = 7, INVINC = 1.6, GROWANIM = 0.5;
+const BASE_VIEW_H = 232;
+const STEP = 1/60;
+const SPRING_V = 8.7;
+
+const THEMES = {
+  overworld:{ cave:false, skyTop:'#7ec3ff', skyMid:'#aadfff', skyBot:'#e9f8ff', glow:'rgba(255,246,200,0.9)', accent:'#ffd23a',
+    mountain:'#8fd6a6', mountainDark:'#69bd88',
+    hill:'#5dc24f', hillDark:'#3a9e36', bush:'#54c44a', bushDark:'#379a33', bushLight:'#88e57c',
+    grass:'#5fc24a', grassDark:'#3aa336', soil:'#cf7a40', soilDark:'#9c5424', soilEdge:'#b06432',
+    brick:'#cc6633', brickLine:'#7a3413', stone:'#c4cbd8', stoneDark:'#8a93a3', used:'#b07a3a', usedDark:'#6e4a1f' },
+  cave:{ cave:true, skyTop:'#0a1330', skyMid:'#15264c', skyBot:'#21386a', glow:'rgba(90,150,230,0.5)', accent:'#7fe0ff',
+    mountain:'#1a2c52', mountainDark:'#101f3e',
+    hill:'#1b2b55', hillDark:'#122142', bush:'#23406e', bushDark:'#16294a', bushLight:'#3a5e9a',
+    grass:'#5a7aa0', grassDark:'#3a516e', soil:'#3c4d6c', soilDark:'#27344b', soilEdge:'#4a5d80',
+    brick:'#56678a', brickLine:'#2c3a52', stone:'#56678a', stoneDark:'#34465f', used:'#445574', usedDark:'#2a374e' },
+  sky:{ cave:false, skyTop:'#ffd8ac', skyMid:'#eab4df', skyBot:'#c3ebff', glow:'rgba(255,240,205,0.95)', accent:'#ffd23a',
+    mountain:'#d2e6ff', mountainDark:'#b4ccef',
+    hill:'#c4efe0', hillDark:'#97dcc6', bush:'#9fe99b', bushDark:'#6fce5a', bushLight:'#caf6bf',
+    grass:'#8fe07a', grassDark:'#5fc24a', soil:'#e6ca9c', soilDark:'#c2a06e', soilEdge:'#d6b888',
+    brick:'#e0a566', brickLine:'#a86a2f', stone:'#eef2fb', stoneDark:'#c4ccdd', used:'#d6b07a', usedDark:'#9c7a4a' },
+  castle:{ cave:true, skyTop:'#241033', skyMid:'#46163e', skyBot:'#67204a', glow:'rgba(255,120,150,0.6)', accent:'#ffb14d',
+    mountain:'#2a132f', mountainDark:'#1b0c20',
+    hill:'#2e1a2e', hillDark:'#1e1020', bush:'#3a2236', bushDark:'#281624', bushLight:'#4c2e44',
+    grass:'#7a4a5a', grassDark:'#5a2e3a', soil:'#4a3548', soilDark:'#2e2030', soilEdge:'#5c4658',
+    brick:'#8c3a4a', brickLine:'#561e2a', stone:'#5a4658', stoneDark:'#382838', used:'#4a3548', usedDark:'#2e2030' },
+  water:{ cave:false, water:true, skyTop:'#16689f', skyMid:'#2a93c8', skyBot:'#62cad8', glow:'rgba(190,240,255,0.45)', accent:'#bfefff',
+    mountain:'#1f6f7e', mountainDark:'#15565f',
+    hill:'#2f8f9e', hillDark:'#1f6f7e', bush:'#36b0a0', bushDark:'#1f8f80', bushLight:'#6fd0c0',
+    grass:'#3fc6c0', grassDark:'#2a9a96', soil:'#d8c48a', soilDark:'#a88f5a', soilEdge:'#c4ad72',
+    brick:'#5aa6b0', brickLine:'#2f6f78', stone:'#7fbfc8', stoneDark:'#4f8f98', used:'#5a8f96', usedDark:'#386870' }
+};
+
+const DIFFICULTY = [
+  { id:'normal', name:'ふつう',                lives:3,  timeMul:1.0, enemyMul:1.0,  noHurt:false, noGameOver:false, startBig:false, jumpMul:1.00, gravityMul:1.00, fallMul:1.00, coyoteMul:1.0, bufferMul:1.0, cutKeep:0.45 },
+  { id:'age5',   name:'やさしい（5さい）',      lives:5,  timeMul:0.5, enemyMul:0.6,  noHurt:false, noGameOver:false, startBig:true,  jumpMul:1.12, gravityMul:0.86, fallMul:0.9,  coyoteMul:2.6, bufferMul:2.6, cutKeep:0.78 },
+  { id:'age3',   name:'とてもやさしい（3さい）', lives:99, timeMul:0.0, enemyMul:0.42, noHurt:true,  noGameOver:true,  startBig:true,  jumpMul:1.20, gravityMul:0.74, fallMul:0.8,  coyoteMul:4.0, bufferMul:4.0, cutKeep:1.0  },
+];
+
+export { BASE_VIEW_H, COYOTE, DIFFICULTY, GRAVITY, GRAVITY_E, GROWANIM, HOLD_G, INVINC, JBUF, JUMP_V, MAXFALL, SPRING_V, STEP, THEMES, TILE };
