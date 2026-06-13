@@ -6,6 +6,7 @@ const TRACKS = {
   cave:{ bpm:104, chords:[[57,60,64],[55,58,62],[53,56,60],[52,55,59]] },
   sky:{ bpm:152, chords:[[62,66,69],[60,64,67],[64,67,71],[59,62,67]] },
   castle:{ bpm:120, chords:[[55,58,62],[54,57,61],[53,56,60],[52,55,59]] },
+  boss:{ bpm:150, style:'boss', chords:[[57,60,64],[56,59,63],[55,58,62],[57,60,64]] },
   map:{ bpm:126, chords:[[60,64,67],[62,65,69],[64,67,71],[59,62,66]] }
 };
 function initAudioOnce(){
@@ -65,6 +66,17 @@ const sfxBat    = ()=> blip({type:'triangle', f0:520, f1:360, dur:0.07, vol:0.14
 function buildSeq(track){
   const cfg=TRACKS[track]||TRACKS.map; SPB=60/cfg.bpm; const chords=cfg.chords;
   seqArr=[]; let tb=0; const e=0.5;
+  if(cfg.style==='boss'){
+    for(const ch of chords){
+      for(let i=0;i<4;i++) seqArr.push({t:tb+i*e, dur:e*0.46, midi:ch[0]-12, voice:'bass'}); // pulsing 8th-note bass
+      seqArr.push({t:tb+0,     dur:e*0.7, midi:ch[0]+12, voice:'lead'});
+      seqArr.push({t:tb+e*0.5, dur:e*0.4, midi:ch[2]+12, voice:'lead'});
+      seqArr.push({t:tb+e*1.0, dur:e*0.7, midi:ch[1]+12, voice:'lead'});
+      seqArr.push({t:tb+e*1.5, dur:e*0.4, midi:ch[0]+19, voice:'lead'});
+      tb+=2;
+    }
+    loopBeats=tb; return;
+  }
   for(const ch of chords){
     const pat=[ch[0]+12, ch[1]+12, ch[2]+12, ch[1]+12];
     for(let i=0;i<4;i++) seqArr.push({t:tb+i*e, dur:e*0.9, midi:pat[i], voice:'lead'});
