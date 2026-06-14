@@ -16,7 +16,7 @@ const game = {
   cleared:false, clearPhase:null, clearTimer:0, holdT:0, fanfarePlayed:false,
   deathTimer:0, confetti:[],
   mapNode:0, mapMaxUnlocked:0, mapCleared:[],
-  water:false, inBonus:false, bonusTimer:0, pauseSel:0, _bonus:null,
+  water:false, inBonus:false, bonusTimer:0, pauseSel:0, pauseConfirm:false, confirmSel:1, _pauseHit:null, _bonus:null, zones:[],
   difficulty:0, diff:DIFFICULTY[0]
 };
 

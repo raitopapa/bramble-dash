@@ -2,7 +2,7 @@ import { LEVELS, buildBonus } from '../content/levels.js';
 import { DIFFICULTY, GRAVITY } from '../core/constants.js';
 import { edge, input } from '../core/input.js';
 import { aabb, clamp, lerp, rand } from '../core/utils.js';
-import { duckMusic, setMusicTrack, sfx1up, sfxClear, sfxCoin, sfxCrumble, sfxFlag, sfxFlagDn, sfxKick, sfxPause, sfxPowerup, sfxStomp, sfxTick, sfxWin } from '../engine/audio.js';
+import { duckMusic, setMusicTrack, sfx1up, sfxBossDown, sfxBossHit, sfxCheckpoint, sfxClear, sfxCoin, sfxCrumble, sfxFlag, sfxFlagDn, sfxKick, sfxPause, sfxPowerup, sfxStomp, sfxTick, sfxWarp, sfxWin } from '../engine/audio.js';
 import { camH, camW, canvas } from '../engine/canvas.js';
 import { Bat, Boss, Chomper, FireBar, MovingPlatform, Particle, Player, Shellback, Spiker, Star, Stomper, WarpGate, Wing } from './entities.js';
 import { addCoin, addScore, collideX, collideY, game, gget, gset, killEnemy, popupWorld, spawnBrickDebris, spawnPuff, spawnSpark } from './state.js';
@@ -17,8 +17,9 @@ function startLevel(idx, respawn){
   game.levelIndex=idx; game.level=lvl; game.grid=lvl.grid; game.theme=lvl.theme;
   game.worldW=lvl.grid.w*16; game.worldH=lvl.grid.h*16;
   game.goalX=lvl.goalX; game.goalGroundY=lvl.goalGroundY; game.goalPoleTop=lvl.goalPoleTop;
-  game.enemies=[]; game.items=[]; game.fireballs=[]; game.particles=[]; game.popups=[]; game.popcoins=[]; game.bumps=[]; game.hazards=[]; game.crumbles=[]; game.platforms=[]; game.checkpoints=[]; game.boss=null; game.bossWinTimer=0;
+  game.enemies=[]; game.items=[]; game.fireballs=[]; game.particles=[]; game.popups=[]; game.popcoins=[]; game.bumps=[]; game.hazards=[]; game.crumbles=[]; game.platforms=[]; game.checkpoints=[]; game.boss=null; game.bossWinTimer=0; game.pauseConfirm=false;
   game.water=!!lvl.water; game.inBonus=false; game.bonusTimer=0; game._bonus=null;
+  game.zones=(lvl.zones||[]).map(z=>({x:z.tx*16,y:z.ty*16,w:z.w*16,h:z.h*16,kind:z.kind,dir:z.dir||0,dx:z.dx||0,dy:z.dy||0,power:z.power||0.4}));
   const g=lvl.grid;
   for(let y=0;y<g.h;y++) for(let x=0;x<g.w;x++){ const c=g.c[y][x];
     if(c==='g'){ game.enemies.push(new Stomper(x,y)); g.c[y][x]=' '; }
@@ -35,6 +36,7 @@ function startLevel(idx, respawn){
   }
   game.platforms = (lvl.platforms||[]).map(d=>new MovingPlatform(d));
   if(!respawn) game.checkpointX = lvl.spawnX;
+  if(game.boss){ const hp=lvl.bossHP||3; game.boss.hp=hp; game.boss.maxhp=hp; game.boss.pal=lvl.bossPal||null; game.boss.name=lvl.bossName||'ボス'; }
   setMusicTrack(game.boss ? 'boss' : (lvl.themeName||'overworld'));
   game.time=lvl.time; game.cleared=false; game.clearPhase=null; game.clearTimer=0; game.holdT=0; game.fanfarePlayed=false; game.deathTimer=0;
   if(!game.player) game.player=new Player();
@@ -46,7 +48,7 @@ function startLevel(idx, respawn){
   game.state='playing'; duckMusic(1);
 }
 function nextLevel(){ const idx=game.levelIndex; if(game.mapCleared) game.mapCleared[idx]=true; const ni=idx+1; if(ni>=LEVELS.length){ game.state='win'; duckMusic(0); sfxWin(); } else { game.mapMaxUnlocked=Math.max(game.mapMaxUnlocked|0, ni); game.mapNode=ni; game.state='worldmap'; setMusicTrack('map'); duckMusic(1); } saveProgress(); }
-function bossDefeated(){ const b=game.boss; game.bossWinTimer=1.8; addScore(3000); popupWorld(b.x+b.w/2,b.y-18,'3000','#ffd34d'); const cs=['#ffd34d','#9effa0','#7cc0ff','#ff9ad2']; for(let i=0;i<26;i++) game.particles.push(new Particle(b.x+b.w/2,b.y+b.h/2, rand(-3,3), rand(-4.5,-0.5), {type:'spark', size:rand(2,3.5), life:rand(0.5,0.95), g:0.12, color:cs[i%cs.length]})); }
+function bossDefeated(){ const b=game.boss; game.bossWinTimer=1.8; sfxBossDown(); addScore(3000); popupWorld(b.x+b.w/2,b.y-18,'3000','#ffd34d'); const cs=['#ffd34d','#9effa0','#7cc0ff','#ff9ad2']; for(let i=0;i<26;i++) game.particles.push(new Particle(b.x+b.w/2,b.y+b.h/2, rand(-3,3), rand(-4.5,-0.5), {type:'spark', size:rand(2,3.5), life:rand(0.5,0.95), g:0.12, color:cs[i%cs.length]})); }
 function startClear(){ game.state='levelclear'; game.cleared=true; game.clearPhase='slide'; const p=game.player; p.onPole=true; p.x=game.goalX-p.w/2; p.vx=0; p.vy=0; game.fanfarePlayed=false; game.holdT=0; duckMusic(0); sfxFlag(); }
 function clearBurst(x,y){ const cs=['#ffd34d','#ff7a3a','#5fd24a','#7cc0ff','#ff9ad2','#ffffff']; for(let i=0;i<24;i++){ const a=Math.random()*6.28, sp=rand(1.5,5.2); game.particles.push(new Particle(x,y, Math.cos(a)*sp, Math.sin(a)*sp-1.6, {type: Math.random()<0.5?'confetti':'spark', size:rand(2,4), life:rand(0.6,1.15), g:0.12, color:cs[i%cs.length], rotv:rand(-0.4,0.4)})); } }
 function updateClear(dt){
@@ -89,9 +91,25 @@ function collectCoins(p){
 }
 function cull(){ game.enemies=game.enemies.filter(e=>!e.dead); game.items=game.items.filter(e=>!e.dead); game.fireballs=game.fireballs.filter(e=>!e.dead); }
 function updateParticlesOnly(dt){ for(const p of game.particles)p.update(dt); game.particles=game.particles.filter(p=>!p.dead); for(const p of game.popups)p.update(dt); game.popups=game.popups.filter(p=>!p.dead); for(const p of game.popcoins)p.update(dt); game.popcoins=game.popcoins.filter(p=>!p.dead); }
+
+function applyZones(p){
+  if(!game.zones||!game.zones.length) return;
+  const ox=p.x+p.w*0.5, top=p.y, bot=p.y+p.h;
+  for(const z of game.zones){
+    const inX=ox>=z.x && ox<=z.x+z.w;
+    if(z.kind==='conveyor'){
+      if(inX && p.onGround && Math.abs(bot-z.y)<6){ p.x+=z.dir*z.power; p._hitL=p._hitR=false; collideX(p); }
+    } else if(z.kind==='current'){
+      if(game.water && inX && bot>=z.y && top<=z.y+z.h){ if(z.dx){ p.x+=z.dx*Math.min(z.power,1.2); collideX(p); } if(z.dy){ const tv=z.dy*z.power; if(z.dy<0) p.vy=Math.min(p.vy,tv); else p.vy=Math.max(p.vy,tv); } }
+    } else if(z.kind==='wind'){
+      if(inX && bot>=z.y && top<=z.y+z.h){ p.x+=z.dir*z.power*(p.onGround?0.45:1); collideX(p); }
+    }
+  }
+}
+
 function updatePlaying(dt){
   const p=game.player;
-  if(edge.pause||edge.start){ game.state='paused'; game.pauseSel=0; duckMusic(0); sfxPause(); return; }
+  if(edge.pause||edge.start){ game.state='paused'; game.pauseSel=0; game.pauseConfirm=false; duckMusic(0); sfxPause(); return; }
   if(game.inBonus){ game.bonusTimer-=dt; if(game.bonusTimer<=0){ exitBonus(); return; } }
   game.time-=dt*2.4*game.diff.timeMul; if(game.time<0)game.time=0;
   if(game.time<=0 && game.diff.timeMul>0 && !p.dead){ p.die(); return; }
@@ -99,10 +117,11 @@ function updatePlaying(dt){
   if(p.riding){ p.x += p.riding.dx; p.y += p.riding.dy; }
   p.riding=null;
   p.update(dt);
+  applyZones(p);
   if(game.state!=='playing') return;
   for(const pf of game.platforms){ if(p.vy>=0){ const feet=p.y+p.h, overX=(p.x+p.w>pf.x && p.x<pf.x+pf.w); if(overX && feet>=pf.y-3 && feet<=pf.y+pf.h+6){ p.y=pf.y-p.h; p.vy=0; p.onGround=true; p._hitD=true; p.riding=pf; } } }
-  for(const cp of game.checkpoints){ if(!cp.active && (p.x+p.w/2)>=cp.x){ cp.active=true; game.checkpointX=cp.x; popupWorld(cp.x, cp.y-18, 'CHECK!', '#9effa0'); sfxFlag(); } }
-  for(const it of game.items){ it.update(dt); if(it.dead) continue; if(aabb(p,it)){ if(it.type==='mushroom'){ if(p.form==='small') p.grow(); addScore(1000); popupWorld(it.x,it.y-4,'1000'); it.dead=true; } else if(it.type==='flower'){ p.toFire(); addScore(1000); popupWorld(it.x,it.y-4,'1000'); it.dead=true; } else if(it.type==='star'){ p.star=Math.max(p.star,9); p.invinc=Math.max(p.invinc,0.3); addScore(1000); popupWorld(it.x,it.y-4,'STAR!','#ffe24d'); it.dead=true; sfxPowerup(); } else if(it.type==='wing'){ p.fly=Math.max(p.fly,9); addScore(1000); popupWorld(it.x,it.y-4,'FLY!','#bfe9ff'); it.dead=true; sfxPowerup(); } else if(it.type==='warp'){ it.dead=true; enterBonus(); return; } } }
+  for(const cp of game.checkpoints){ if(!cp.active && (p.x+p.w/2)>=cp.x){ cp.active=true; game.checkpointX=cp.x; popupWorld(cp.x, cp.y-18, 'CHECK!', '#9effa0'); sfxCheckpoint(); } }
+  for(const it of game.items){ it.update(dt); if(it.dead) continue; if(aabb(p,it)){ if(it.type==='mushroom'){ if(p.form==='small') p.grow(); addScore(1000); popupWorld(it.x,it.y-4,'1000'); it.dead=true; } else if(it.type==='flower'){ p.toFire(); addScore(1000); popupWorld(it.x,it.y-4,'1000'); it.dead=true; } else if(it.type==='star'){ p.star=Math.max(p.star,9); p.invinc=Math.max(p.invinc,0.3); addScore(1000); popupWorld(it.x,it.y-4,'STAR!','#ffe24d'); it.dead=true; sfxPowerup(); } else if(it.type==='wing'){ p.fly=Math.max(p.fly,9); addScore(1000); popupWorld(it.x,it.y-4,'FLY!','#bfe9ff'); it.dead=true; sfxPowerup(); } else if(it.type==='warp'){ it.dead=true; sfxWarp(); enterBonus(); return; } } }
   for(const e of game.enemies) e.update(dt);
   for(const e of game.enemies){ if(e.dead)continue; if(e.type==='shellback'&&e.state==='slide'){ for(const o of game.enemies){ if(o===e||o.dead||(o.squash&&o.squash>0)||o.type==='chomper')continue; if(aabb(e,o)){ killEnemy(o); addScore(200); popupWorld(o.x,o.y-4,'200'); sfxKick(); } } } }
   resolvePlayerEnemies();
@@ -110,10 +129,10 @@ function updatePlaying(dt){
   if(game.boss){ const b=game.boss; b.update(dt);
     if(!b.dead){
       if(aabb(p,b)){ const fromAbove = p.vy>0.5 && (p.y+p.h)-b.y < b.h*0.6;
-        if(fromAbove){ const r=b.hit(); doStompBounce(); if(r===2) bossDefeated(); else if(r===1){ addScore(500); popupWorld(b.x+b.w/2,b.y-6,'500'); } }
+        if(fromAbove){ const r=b.hit(); doStompBounce(); if(r===2) bossDefeated(); else if(r===1){ addScore(500); popupWorld(b.x+b.w/2,b.y-6,'500'); sfxBossHit(); } }
         else if(b.invuln<=0){ p.hurt(); if(p.dead) return; }
       }
-      for(const fb of game.fireballs){ if(fb.dead)continue; if(aabb(fb,b)){ const r=b.hit(); fb.dead=true; spawnSpark(fb.x,fb.y,'#ffae3a'); if(r===2) bossDefeated(); } }
+      for(const fb of game.fireballs){ if(fb.dead)continue; if(aabb(fb,b)){ const r=b.hit(); fb.dead=true; spawnSpark(fb.x,fb.y,'#ffae3a'); if(r===2) bossDefeated(); else if(r===1) sfxBossHit(); } }
     } else {
       game.bossWinTimer-=dt;
       if(game.bossWinTimer<=0 && game.state==='playing'){ game.state='levelclear'; game.cleared=true; game.clearPhase='tally'; game.clearTimer=0; game.holdT=0; if(!game.fanfarePlayed){ sfxClear(); game.fanfarePlayed=true; } duckMusic(0); }
@@ -141,12 +160,12 @@ function enterBonus(){
   game._bonus={ grid:game.grid, level:game.level, theme:game.theme, worldW:game.worldW, worldH:game.worldH,
     goalX:game.goalX, goalGroundY:game.goalGroundY, goalPoleTop:game.goalPoleTop,
     enemies:game.enemies, items:game.items, fireballs:game.fireballs, particles:game.particles, popups:game.popups, popcoins:game.popcoins, bumps:game.bumps, hazards:game.hazards, crumbles:game.crumbles, platforms:game.platforms, checkpoints:game.checkpoints, checkpointX:game.checkpointX, boss:game.boss,
-    camX:game.camX, camY:game.camY, time:game.time, levelIndex:game.levelIndex, water:game.water, px:p.x, py:p.y, form:p.form };
+    camX:game.camX, camY:game.camY, time:game.time, levelIndex:game.levelIndex, water:game.water, zones:game.zones, px:p.x, py:p.y, form:p.form };
   const b=buildBonus();
   game.level=b; game.grid=b.grid; game.theme=b.theme; game.worldW=b.grid.w*16; game.worldH=b.grid.h*16;
   game.goalX=99999; game.goalGroundY=b.goalGroundY; game.goalPoleTop=b.goalPoleTop;
   game.enemies=[]; game.items=[]; game.fireballs=[]; game.particles=[]; game.popups=[]; game.popcoins=[]; game.bumps=[]; game.hazards=[]; game.crumbles=[]; game.platforms=[]; game.checkpoints=[]; game.boss=null;
-  game.water=false; game.inBonus=true; game.bonusTimer=12;
+  game.water=false; game.zones=[]; game.inBonus=true; game.bonusTimer=12;
   p.x=b.spawnX; p.y=b.spawnFeetY-p.h; p.vx=0; p.vy=0; p.onGround=false; p.star=0; p.fly=0;
   game.camX=0; game.camY=0; setMusicTrack('sky'); duckMusic(1); sfxPowerup();
 }
@@ -154,12 +173,12 @@ function exitBonus(){ const s=game._bonus; if(!s){ game.inBonus=false; return; }
   game.grid=s.grid; game.level=s.level; game.theme=s.theme; game.worldW=s.worldW; game.worldH=s.worldH;
   game.goalX=s.goalX; game.goalGroundY=s.goalGroundY; game.goalPoleTop=s.goalPoleTop;
   game.enemies=s.enemies; game.items=s.items; game.fireballs=s.fireballs; game.particles=s.particles; game.popups=s.popups; game.popcoins=s.popcoins; game.bumps=s.bumps; game.hazards=s.hazards; game.crumbles=s.crumbles; game.platforms=s.platforms; game.checkpoints=s.checkpoints; game.checkpointX=s.checkpointX; game.boss=s.boss;
-  game.levelIndex=s.levelIndex; game.water=s.water; game.time=s.time;
+  game.levelIndex=s.levelIndex; game.water=s.water; game.zones=s.zones||[]; game.time=s.time;
   p.form=s.form; p.sizeFromForm(); p.x=s.px; p.y=s.py; p.vx=0; p.vy=0;
   game.camX=s.camX; game.camY=s.camY; game.inBonus=false; game.bonusTimer=0; game._bonus=null;
   setMusicTrack(game.level.themeName||'overworld'); duckMusic(1);
 }
-function returnToMap(){ game.inBonus=false; game.bonusTimer=0; game._bonus=null; game.water=false; const p=game.player; if(p){ p.star=0; p.fly=0; } game.state='worldmap'; game.mapNode=Math.max(0,Math.min(game.mapNode|0,LEVELS.length-1)); setMusicTrack('map'); duckMusic(1); saveProgress(); }
+function returnToMap(){ game.inBonus=false; game.bonusTimer=0; game._bonus=null; game.water=false; game.zones=[]; const p=game.player; if(p){ p.star=0; p.fly=0; } game.state='worldmap'; game.mapNode=Math.max(0,Math.min(game.mapNode|0,LEVELS.length-1)); setMusicTrack('map'); duckMusic(1); saveProgress(); }
 function updateMenu(dt){
   if(edge.start||edge.jump||game.oneShotStart){ game.oneShotStart=false; newGame(); return; }
   game.oneShotStart=false;

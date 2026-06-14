@@ -8,6 +8,7 @@ class Grid{
   get(x,y){ if(x<0||x>=this.w||y<0||y>=this.h) return ' '; return this.c[y][x]; }
 }
 function pipe(g,x,h,gy){ for(let j=0;j<h;j++){ g.set(x,gy-1-j,'P'); g.set(x+1,gy-1-j,'P'); } }
+function warpPipe(g,x,gy,h){ h=h||2; pipe(g,x,h,gy); g.set(x, gy-1-h, 'N'); }
 function stairUp(g,x,n,gy){ for(let i=0;i<n;i++) for(let j=0;j<=i;j++) g.set(x+i,gy-1-j,'S'); }
 function stairDown(g,x,n,gy){ for(let i=0;i<n;i++) for(let j=0;j<=(n-1-i);j++) g.set(x+i,gy-1-j,'S'); }
 function row(g,x,y,n,ch){ for(let i=0;i<n;i++) g.set(x+i,y,ch); }
@@ -26,7 +27,8 @@ function finalize(g,opts){
   return { grid:g, theme, themeName:opts.theme, decor, time:opts.time||300, name:opts.name||'1-1',
     spawnX:(opts.spawnTX||2)*16+2, spawnFeetY:gy*16, goalX:(opts.goalTX)*16+8,
     goalGroundY:(opts.goalGroundY!=null?opts.goalGroundY:gy)*16, goalPoleTop:(opts.goalPoleTopY!=null?opts.goalPoleTopY:4)*16,
-    water:!!opts.water, platforms:opts.platforms||[] };
+    water:!!opts.water, platforms:opts.platforms||[],
+    world:opts.world||1, isBoss:!!opts.boss, bossHP:opts.bossHP||3, bossPal:opts.bossPal||null, bossName:opts.bossName||'ボス', zones:opts.zones||[] };
 }
 function buildLevel1(){
   const W=212,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
@@ -53,7 +55,8 @@ function buildLevel1(){
   g.set(36,gy,'T'); g.set(36,8,'o'); g.set(36,7,'o');
   g.set(76,gy-1,'p');
   g.set(88,gy-1,'H');
-  return finalize(g,{theme:'overworld',time:300,name:'1-1',spawnTX:3,gy,goalTX:198,goalGroundY:gy,goalPoleTopY:4,seed:11});
+warpPipe(g,8,gy,3);
+    return finalize(g,{theme:'overworld',time:300,name:'1-1',spawnTX:3,gy,goalTX:198,goalGroundY:gy,goalPoleTopY:4,seed:11});
 }
 function buildLevel2(){
   const W=224,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
@@ -113,7 +116,8 @@ function buildLevel3(){
   stairUp(g,168,4,gy);
   g.set(50,7,'b'); g.set(120,6,'b');
   g.set(96,gy-1,'H');
-  return finalize(g,{theme:'cave',time:320,name:'2-1',spawnTX:3,gy,goalTX:190,goalGroundY:gy,goalPoleTopY:4,seed:77});
+warpPipe(g,10,gy,3);
+    return finalize(g,{theme:'cave',time:320,name:'4-1',spawnTX:3,gy,goalTX:190,goalGroundY:gy,goalPoleTopY:4,seed:77,zones:[{tx:6,ty:13,w:8,h:1,kind:'conveyor',dir:1,power:0.5},{tx:40,ty:13,w:8,h:1,kind:'conveyor',dir:1,power:0.5}]});
 }
 function buildLevel4(){
   // 2-2 : Underground (cave). Ceiling + stalactites, raised stone, piranha pipes.
@@ -148,7 +152,7 @@ function buildLevel4(){
   stairUp(g,186,4,gy);
   g.set(34,7,'b'); g.set(86,6,'b'); g.set(150,7,'b');
   g.set(104,gy-1,'H');
-  return finalize(g,{theme:'cave',time:340,name:'2-2',spawnTX:3,gy,goalTX:202,goalGroundY:gy,goalPoleTopY:4,seed:123});
+  return finalize(g,{theme:'cave',time:340,name:'4-2',spawnTX:3,gy,goalTX:202,goalGroundY:gy,goalPoleTopY:4,seed:123,zones:[{tx:8,ty:13,w:8,h:1,kind:'conveyor',dir:1,power:0.55},{tx:50,ty:13,w:8,h:1,kind:'conveyor',dir:-1,power:0.45}]});
 }
 function buildLevel5(){
   // 3-1 : Sky athletic. Floating islands over a void (falling = death).
@@ -172,7 +176,8 @@ function buildLevel5(){
   g.set(140,gy,'T'); g.set(140,7,'o'); g.set(140,6,'o');
   g.set(80,7,'b'); g.set(150,6,'b');
   g.set(103,gy-1,'H');
-  return finalize(g,{theme:'sky',time:320,name:'3-1',spawnTX:3,gy,goalTX:196,goalGroundY:gy,goalPoleTopY:3,seed:321,
+warpPipe(g,3,gy,2);
+    return finalize(g,{theme:'sky',time:320,name:'3-1',spawnTX:3,gy,goalTX:196,goalGroundY:gy,goalPoleTopY:3,seed:321,zones:[{tx:40,ty:5,w:28,h:6,kind:'wind',dir:1,power:0.32},{tx:108,ty:5,w:28,h:6,kind:'wind',dir:-1,power:0.3}],
     platforms:[{tx:89,ty:9,w:3,axis:'v',range:3,speed:0.9},{tx:125,ty:9,w:3,axis:'h',range:3,speed:1.0}]});
 }
 function buildLevel6(){
@@ -241,7 +246,8 @@ function buildLevelWater(){
   g.set(36,7,'b'); g.set(112,6,'b'); g.set(176,8,'b');
   // a star reward up high + a wing
   g.set(50,2,'*'); g.set(150,2,'^');
-  return finalize(g,{theme:'water',water:true,time:340,name:'2-3',spawnTX:3,gy,goalTX:W-4,goalGroundY:gy,goalPoleTopY:3,seed:404});
+warpPipe(g,10,gy,2);
+    return finalize(g,{theme:'water',water:true,time:340,name:'2-1',spawnTX:3,gy,goalTX:W-4,goalGroundY:gy,goalPoleTopY:3,seed:404,zones:[{tx:49,ty:2,w:3,h:9,kind:'current',dy:-1,power:2.0},{tx:100,ty:5,w:18,h:7,kind:'current',dx:1,power:0.35}]});
 }
 function buildBonus(){
   // Small coin room reached through a warp star. Grab coins before the timer runs out!
@@ -255,6 +261,68 @@ function buildBonus(){
   g.set(4,8,'o'); g.set(W-5,8,'o'); g.set(4,2,'o'); g.set(W-5,2,'o');
   return finalize(g,{theme:'sky',time:300,name:'ボーナス',spawnTX:2,gy,goalTX:W+8,goalGroundY:gy,goalPoleTopY:3,seed:99});
 }
-const LEVELS=[buildLevel1, buildLevel2, buildLevel3, buildLevel4, buildLevelWater, buildLevel5, buildLevel6, buildLevel7];
 
-export { Grid, LEVELS, buildBonus, buildLevel1, buildLevel2, buildLevel3, buildLevel4, buildLevel5, buildLevel6, buildLevel7, buildLevelWater, finalize, makeDecor, pipe, row, stairDown, stairUp };
+function buildWater2(){
+  // 2-2 : open water, swim up coin columns, dodge fish (bats).
+  const W=200,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
+  for(let x=0;x<W;x++){ g.set(x,gy,'X'); g.set(x,gy+1,'X'); }
+  g.set(0,gy-1,'S'); g.set(1,gy-1,'S');
+  const blk=(x,y,n)=>{ for(let i=0;i<n;i++) g.set(x+i,y,'S'); };
+  const col=(x,y0,y1)=>{ for(let y=y0;y<=y1;y++) g.set(x,y,'o'); };
+  blk(16,8,3); col(20,3,9); blk(28,5,2); blk(36,10,3);
+  blk(48,7,4); col(56,3,8); blk(64,10,2); blk(72,5,3);
+  blk(88,8,3); col(96,4,9); blk(108,6,3); blk(120,11,3);
+  blk(132,7,4); col(140,3,8); blk(150,10,3); blk(162,6,3);
+  blk(174,9,4); col(182,3,8);
+  g.set(40,7,'b'); g.set(78,6,'b'); g.set(118,6,'b'); g.set(158,8,'b');
+  g.set(96,gy-1,'H');
+  g.set(56,2,'^'); g.set(140,2,'*');
+  return finalize(g,{theme:'water',water:true,time:340,name:'2-2',spawnTX:3,gy,goalTX:W-4,goalGroundY:gy,goalPoleTopY:3,seed:414,zones:[{tx:55,ty:2,w:3,h:9,kind:'current',dy:-1,power:2.0},{tx:95,ty:3,w:3,h:9,kind:'current',dy:-1,power:1.9},{tx:120,ty:5,w:16,h:7,kind:'current',dx:1,power:0.35}]});
+}
+function buildSky2(){
+  // 3-2 : floating islands, springs and moving platforms (falling = death).
+  const W=212,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
+  const isle=(x,w)=>{ for(let i=0;i<w;i++){ g.set(x+i,gy,'X'); g.set(x+i,gy+1,'X'); } };
+  const plat=(x,y,w)=>{ for(let i=0;i<w;i++) g.set(x+i,y,'X'); };
+  isle(0,8); g.set(3,9,'?'); g.set(5,9,'o');
+  const spots=[];
+  for(let x=12;x<=156;x+=9){ isle(x,5); spots.push(x); }
+  isle(164,44);
+  for(let i=0;i<spots.length;i++){ const sx=spots[i], m=i%4;
+    if(i===6){ g.set(sx+2,9,'!'); }
+    else if(m===0){ g.set(sx+1,9,'o'); g.set(sx+2,8,'o'); g.set(sx+3,9,'o'); }
+    else if(m===1){ plat(sx+6,8,3); g.set(sx+7,7,'o'); }
+    else if(m===2){ g.set(sx+2,gy-1,'b'); }
+    else { g.set(sx+2,9,'?'); }
+  }
+  g.set(176,9,'?'); g.set(178,9,'o'); g.set(180,8,'o'); g.set(184,gy-1,'k');
+  g.set(140,gy,'T'); g.set(140,7,'o'); g.set(140,6,'o');
+  g.set(72,7,'b'); g.set(150,6,'b');
+  g.set(103,gy-1,'H'); g.set(95,2,'*');
+  return finalize(g,{theme:'sky',time:330,name:'3-2',spawnTX:3,gy,goalTX:196,goalGroundY:gy,goalPoleTopY:3,seed:521,zones:[{tx:30,ty:5,w:26,h:6,kind:'wind',dir:1,power:0.3},{tx:100,ty:5,w:26,h:6,kind:'wind',dir:-1,power:0.3}],
+    platforms:[{tx:89,ty:9,w:3,axis:'v',range:3,speed:0.9},{tx:125,ty:9,w:3,axis:'h',range:3,speed:1.0}]});
+}
+function makeBossArena(o){
+  // Per-world boss hall. Defeat the boss (stomp or fireball, bossHP times) to win.
+  const W=34,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
+  for(let x=0;x<W;x++){ g.set(x,gy,'X'); g.set(x,gy+1,'X'); }
+  for(let y=0;y<gy;y++){ g.set(0,y,'S'); g.set(1,y,'S'); g.set(W-2,y,'S'); g.set(W-1,y,'S'); }
+  for(let y=2;y<gy;y+=2){ g.set(2,y,'o'); g.set(W-3,y,'o'); }
+  g.set(9,gy-2,'B'); g.set(10,gy-2,'B'); g.set(W-11,gy-2,'B'); g.set(W-10,gy-2,'B');
+  if(o.spring){ g.set(6,gy,'T'); g.set(W-7,gy,'T'); }
+  g.set(18,gy-1,'O');
+  return finalize(g,{theme:o.theme,water:!!o.water,time:o.time||400,name:o.name,boss:true,world:o.world,bossHP:o.hp,bossPal:o.pal,bossName:o.bossName,spawnTX:3,gy,goalTX:W+3,goalGroundY:gy,goalPoleTopY:3,seed:o.seed,zones:o.zones||[]});
+}
+function bossW1(){ return makeBossArena({theme:'overworld',world:1,hp:3,name:'1-ボス',bossName:'もりのおやぶん',seed:701}); }
+function bossW2(){ return makeBossArena({theme:'water',water:true,world:2,hp:4,name:'2-ボス',bossName:'うずまきボス',pal:{body:'#3f7fb0',belly:'#cdeefd',horn:'#27607e',brow:'#1d4257'},seed:702,zones:[{tx:2,ty:8,w:30,h:5,kind:'current',dx:1,power:0.22}]}); }
+function bossW3(){ return makeBossArena({theme:'sky',world:3,hp:4,name:'3-ボス',bossName:'かみなりボス',spring:true,pal:{body:'#c75f8f',belly:'#ffd9ea',horn:'#8a3a66',brow:'#6e2a4e'},seed:703,zones:[{tx:2,ty:4,w:30,h:5,kind:'wind',dir:1,power:0.25}]}); }
+function bossW4(){ return makeBossArena({theme:'castle',world:4,hp:6,name:'4-ボス',bossName:'まおうブランブル',pal:{body:'#7a4a9e',belly:'#ead9f5',horn:'#4a2a6a',brow:'#3a1f54'},seed:704,zones:[{tx:2,ty:13,w:14,h:1,kind:'conveyor',dir:1,power:0.45},{tx:18,ty:13,w:14,h:1,kind:'conveyor',dir:-1,power:0.45}]}); }
+
+const LEVELS=[
+  buildLevel1, buildLevel2, bossW1,
+  buildLevelWater, buildWater2, bossW2,
+  buildLevel5, buildSky2, bossW3,
+  buildLevel3, buildLevel4, bossW4,
+];
+
+export { Grid, LEVELS, bossW1, bossW2, bossW3, bossW4, buildBonus, buildLevel1, buildLevel2, buildLevel3, buildLevel4, buildLevel5, buildLevel6, buildLevel7, buildSky2, buildLevelWater, buildWater2, finalize, makeBossArena, makeDecor, pipe, row, stairDown, stairUp, warpPipe };

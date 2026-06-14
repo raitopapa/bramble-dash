@@ -271,7 +271,7 @@ async function partA() {
   game.difficulty = 0; game.diff = (await import('../src/core/constants.js')).DIFFICULTY[0];
 
   // --- underwater swim ---
-  flow.newGame(); scenes.sync(); game.mapMaxUnlocked = 7; game.mapNode = 4; enterFromMap();
+  flow.newGame(); scenes.sync(); game.mapMaxUnlocked = 11; game.mapNode = 3; enterFromMap();
   assert(game.water === true, 'water stage enables swim mode');
   { const p = game.player; p.invinc = 999; input.jump = false; for (let i = 0; i < 6; i++) step(1); const y0 = p.y; input.jump = true; step(1); input.jump = false; let minY = p.y; for (let i = 0; i < 30; i++) { step(1); if (p.y < minY) minY = p.y; } assert(minY < y0 + 2, 'swim stroke lifts the player'); }
 
@@ -292,14 +292,53 @@ async function partA() {
 
   // --- pause -> return to world map ---
   flow.newGame(); scenes.sync(); input.jump = false; step(1); game.mapNode = 0; enterFromMap();
-  { input.jump = false; input.left = false; input.right = false; step(1); game.state = 'paused'; game.pauseSel = 1; input.jump = true; step(1); input.jump = false; assert(game.state === 'worldmap', 'pause menu returns to the world map'); }
+  { input.jump = false; input.left = false; input.right = false; step(1);
+    game.state = 'paused'; game.pauseSel = 1; game.pauseConfirm = false;
+    input.jump = true; step(1); input.jump = false;
+    assert(game.state === 'paused' && game.pauseConfirm === true, 'retire opens a confirm step');
+    game.confirmSel = 1; input.left = true; step(1); input.left = false;
+    assert(game.confirmSel === 0, 'left selects もどる on the confirm');
+    input.jump = true; step(1); input.jump = false;
+    assert(game.state === 'worldmap', 'confirming retire returns to the world map');
+    // and resume path: pausing then choosing つづける keeps playing
+    game.mapNode = 0; input.jump = false; step(1); enterFromMap(); input.jump=false; step(1);
+    game.state = 'paused'; game.pauseSel = 0; game.pauseConfirm = false; input.jump = true; step(1); input.jump = false;
+    assert(game.state === 'playing', 'continue resumes the stage'); }
+  // render both pause screens to catch draw errors
+  game.state='paused'; game.pauseConfirm=false; scenes.sync(); scenes.render(); game.pauseConfirm=true; game.confirmSel=1; scenes.render(); game.pauseConfirm=false; game.state='playing';
+  // world-map stage preview render (stage / boss / locked)
+  game.state='worldmap'; game.mapMaxUnlocked=11; scenes.sync();
+  for (const n of [0, 3, 5, 11]) { game.mapNode = n; scenes.render(); }
+  game.mapMaxUnlocked = 2; game.mapNode = 5; scenes.render(); game.mapMaxUnlocked = 11; game.state='playing';
+
+
+  // --- world gimmicks: conveyor / current / wind ---
+  flow.newGame(); scenes.sync(); input.jump = false; step(1); game.mapNode = 0; enterFromMap();
+  { const p = game.player; p.invinc = 999; for (let i = 0; i < 20; i++) step(1);
+    const gy = game.grid.gy; p.x = 5 * 16; p.y = gy * 16 - p.h; p.vx = 0; p.vy = 0; p.onGround = true;
+    game.zones = [{ x: 2 * 16, y: gy * 16, w: 12 * 16, h: 16, kind: 'conveyor', dir: 1, power: 0.5 }];
+    const x0 = p.x; for (let i = 0; i < 20; i++) { p.onGround = true; step(1); }
+    assert(p.x > x0 + 1, 'conveyor carries a grounded player'); }
+  flow.startLevel(3); scenes.sync();
+  { const p = game.player; p.invinc = 999; p.x = 20 * 16; p.y = 6 * 16; p.vx = 0; p.vy = 0;
+    game.zones = [{ x: 18 * 16, y: 2 * 16, w: 6 * 16, h: 9 * 16, kind: 'current', dx: 0, dy: -1, power: 0.6 }];
+    const y0 = p.y; for (let i = 0; i < 20; i++) step(1);
+    assert(p.y < y0 - 1, 'water current lifts the swimmer'); }
+  flow.startLevel(6); scenes.sync();
+  { const p = game.player; p.invinc = 999; p.x = 40 * 16; p.y = 6 * 16; p.vx = 0; p.vy = 0; p.onGround = false;
+    game.zones = [{ x: 38 * 16, y: 4 * 16, w: 10 * 16, h: 8 * 16, kind: 'wind', dir: 1, power: 0.5 }];
+    const x0 = p.x; for (let i = 0; i < 14; i++) { p.onGround = false; step(1); }
+    assert(p.x > x0 + 1, 'wind pushes the player sideways'); }
+
+  // bonus warp pipes spawn a warp item in each world's first stage
+  for (const idx of [0, 3, 6, 9]) { flow.startLevel(idx); assert(game.items.some(it => it.type === 'warp'), 'world stage ' + idx + ' has a bonus warp pipe'); }
 
   // boss fight: enter the arena, stomp the boss 3x -> defeat -> victory -> win
-  flow.newGame(); scenes.sync(); game.mapMaxUnlocked = 7; game.mapNode = 7; input.jump = false; step(1); enterFromMap();
+  flow.newGame(); scenes.sync(); game.mapMaxUnlocked = 11; game.mapNode = 11; input.jump = false; step(1); enterFromMap();
   assert(game.boss && !game.boss.dead, 'boss spawned in the arena');
   game.player.invinc = 999;
   let guardB = 0;
-  while (game.boss && !game.boss.dead && guardB++ < 1200) {
+  while (game.boss && !game.boss.dead && guardB++ < 3000) {
     const b = game.boss;
     if (b.invuln > 0) { step(1); continue; }                 // wait out the grace period
     game.player.x = b.x + b.w / 2 - game.player.w / 2; game.player.y = b.y - game.player.h - 1; game.player.vy = 2; game.player.onGround = false;
@@ -310,7 +349,7 @@ async function partA() {
   assert(game.state === 'win', 'defeating the boss wins the game');
 
   // render every level once (all themes + water + boss) to catch draw-time errors
-  for (let i = 0; i < 8; i++) { flow.startLevel(i); scenes.sync(); scenes.render(); scenes.render(); }
+  for (let i = 0; i < 12; i++) { flow.startLevel(i); scenes.sync(); scenes.render(); scenes.render(); }
 
   // render the remaining stub scenes (never entered by flow, but must not throw)
   for (const name of ['boss', 'cutscene']) { scenes.set(name); scenes.render(); }

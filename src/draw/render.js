@@ -20,6 +20,7 @@ function drawSky(th){ const W=canvas.width,H=canvas.height,t=animClock;
   } else {
     if(th===THEMES.castle){ const mx=W*0.8,my=H*0.22,mr=H*0.085; ctx.fillStyle='rgba(255,238,205,0.92)'; ctx.beginPath(); ctx.arc(mx,my,mr,0,7); ctx.fill(); ctx.fillStyle=th.skyTop; ctx.beginPath(); ctx.arc(mx+mr*0.55,my-mr*0.32,mr*0.92,0,7); ctx.fill(); }
     ctx.fillStyle='#fff'; for(let i=0;i<28;i++){ const x=(i*129.7)%W, y=(i*73.3)%(H*0.5); const tw=Math.abs(Math.sin(t*1.4+i*1.3)); ctx.globalAlpha=0.25+tw*0.5; ctx.fillRect(x,y,1.5,1.5); } ctx.globalAlpha=1;
+    if(th===THEMES.cave){ ctx.fillStyle=th.mountainDark||'#122142'; for(let i=0;i<12;i++){ const x=((i*150-game.camX*0.2)%(W+120)+W+120)%(W+120)-60, w=14+(i%3)*8, h=20+(i%4)*14; ctx.beginPath(); ctx.moveTo(x-w/2,0); ctx.lineTo(x+w/2,0); ctx.lineTo(x,h); ctx.closePath(); ctx.fill(); } }
     const vg=ctx.createRadialGradient(W/2,H*0.46,H*0.18,W/2,H*0.5,H*0.95); vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.5)'); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
   }
 }
@@ -32,6 +33,27 @@ function drawMountains(th){ const W=canvas.width,H=canvas.height, baseY=H*0.84;
     ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
     if(!th.cave){ ctx.fillStyle='rgba(255,255,255,0.10)'; ctx.beginPath(); ctx.moveTo(0,H);
       for(let x=0;x<=W;x+=10){ const wx=x+game.camX*L.spd; const yy=baseY-L.off-(Math.sin(wx*L.k)*0.5+0.5)*L.amp-Math.sin(wx*L.k*2.7+1.3)*L.amp*0.16; ctx.lineTo(x,yy); ctx.lineTo(x,yy+3); } ctx.closePath(); }
+  }
+  drawMtnExtras(th,baseY);
+}
+function drawMtnExtras(th,baseY){ const W=canvas.width,H=canvas.height,t=animClock,cam=game.camX;
+  if(th===THEMES.overworld){
+    ctx.fillStyle='rgba(40,120,60,0.5)';
+    for(let i=0;i<7;i++){ const x=((i*220-cam*0.3)%(W+120)+W+120)%(W+120)-60, y=baseY-H*0.05;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-8,y); ctx.lineTo(x,y-16); ctx.lineTo(x+8,y); ctx.closePath(); ctx.fill(); }
+    ctx.strokeStyle='rgba(40,50,80,0.4)'; ctx.lineWidth=2;
+    for(let i=0;i<3;i++){ const bx=((i*330-t*22)%(W+80)+W+80)%(W+80)-40, by=H*(0.18+i*0.05)+Math.sin(t+i)*4, w=7;
+      ctx.beginPath(); ctx.moveTo(bx-w,by); ctx.quadraticCurveTo(bx-w*0.4,by-w*0.5,bx,by); ctx.quadraticCurveTo(bx+w*0.4,by-w*0.5,bx+w,by); ctx.stroke(); }
+  } else if(th===THEMES.sky){
+    for(let i=0;i<4;i++){ const x=((i*300-cam*0.25)%(W+200)+W+200)%(W+200)-100, y=H*(0.4+(i%2)*0.12)+Math.sin(t*0.4+i)*4, w=H*0.12;
+      ctx.fillStyle='rgba(150,210,160,0.45)'; ctx.beginPath(); ctx.ellipse(x,y,w,w*0.4,0,0,Math.PI); ctx.fill();
+      ctx.fillStyle='rgba(120,170,120,0.45)'; ctx.beginPath(); ctx.moveTo(x-w,y); ctx.lineTo(x,y+w*0.55); ctx.lineTo(x+w,y); ctx.closePath(); ctx.fill(); }
+  } else if(th===THEMES.castle){
+    for(let i=0;i<3;i++){ const x=((i*360-cam*0.2)%(W+260)+W+260)%(W+260)-130, tw=H*0.07, th2=H*0.34, y=baseY-th2;
+      ctx.fillStyle='rgba(20,10,24,0.55)'; ctx.fillRect(x,y,tw,th2);
+      for(let c=0;c<3;c++) ctx.fillRect(x+c*(tw/3),y-H*0.02,tw/4,H*0.02);
+      ctx.fillStyle='rgba(255,90,90,0.5)'; ctx.fillRect(x+tw*0.42,y-H*0.06,2,H*0.04);
+      ctx.beginPath(); ctx.moveTo(x+tw*0.42,y-H*0.06); ctx.lineTo(x+tw*0.42+H*0.03,y-H*0.05); ctx.lineTo(x+tw*0.42,y-H*0.04); ctx.fill(); }
   }
 }
 function drawHills(th){ if(th.water) return; const f=0.55, left=game.camX*f-90, right=game.camX*f+camW+90;
@@ -175,13 +197,33 @@ function drawHUD(){
 }
 function dim(a){ ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle='rgba(8,12,30,'+a+')'; ctx.fillRect(0,0,canvas.width,canvas.height); }
 function centerText(s,y,size,color,shadow){ ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=size+'px "Press Start 2P", monospace'; if(shadow){ ctx.fillStyle=shadow; ctx.fillText(s,canvas.width/2+2,y+2); } ctx.fillStyle=color; ctx.fillText(s,canvas.width/2,y); }
-function drawPause(){ dim(0.55); const W=canvas.width,H=canvas.height;
-  centerText('PAUSE',H*0.28,Math.round(H*0.08),'#ffd23a','#7a4e06');
-  const opts=['つづける','マップにもどる'], sel=game.pauseSel|0;
-  const bw=H*0.46, bh=H*0.12, gap=H*0.05, total=bw*2+gap; let x=W/2-total/2; const y=H*0.52;
+function pauseButton(x,y,bw,bh,label,on,yes){
+  const g=ctx.createLinearGradient(0,y-bh/2,0,y+bh/2);
+  if(on){ if(yes){ g.addColorStop(0,'#ff8a6a'); g.addColorStop(1,'#e8531e'); } else { g.addColorStop(0,'#ffd24d'); g.addColorStop(1,'#f0991a'); } }
+  else { g.addColorStop(0,'#67738c'); g.addColorStop(1,'#454f64'); }
+  ctx.fillStyle=g; rr(ctx,x,y-bh/2,bw,bh,bh*0.28); ctx.fill();
+  ctx.strokeStyle=on?'#ffffff':'rgba(0,0,0,0.4)'; ctx.lineWidth=on?3:2; rr(ctx,x,y-bh/2,bw,bh,bh*0.28); ctx.stroke();
+  ctx.fillStyle=on?(yes?'#5a2406':'#7a3a06'):'rgba(255,255,255,0.88)';
+  ctx.font='bold '+Math.round((canvas.height)*0.04)+'px "Baloo 2","Hiragino Maru Gothic ProN",sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(label,x+bw/2,y+1);
+}
+function drawPause(){ dim(0.58); const W=canvas.width,H=canvas.height; game._pauseHit=[];
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  for(let i=0;i<2;i++){ const on=i===sel; const g=ctx.createLinearGradient(0,y-bh/2,0,y+bh/2); if(on){ g.addColorStop(0,'#ffd24d'); g.addColorStop(1,'#f0991a'); } else { g.addColorStop(0,'#67738c'); g.addColorStop(1,'#454f64'); } ctx.fillStyle=g; rr(ctx,x,y-bh/2,bw,bh,bh*0.28); ctx.fill(); ctx.strokeStyle=on?'#ffffff':'rgba(0,0,0,0.4)'; ctx.lineWidth=on?3:2; rr(ctx,x,y-bh/2,bw,bh,bh*0.28); ctx.stroke(); ctx.fillStyle=on?'#7a3a06':'rgba(255,255,255,0.88)'; ctx.font='bold '+Math.round(H*0.04)+'px "Baloo 2","Hiragino Maru Gothic ProN",sans-serif'; ctx.fillText(opts[i], x+bw/2, y+1); x+=bw+gap; }
-  ctx.font=Math.round(H*0.026)+'px "Hiragino Maru Gothic ProN",sans-serif'; ctx.fillStyle='#cfe0ff'; ctx.fillText('\u2190 \u2192 でせんたく ・ ジャンプでけってい', W/2, H*0.72);
+  if(game.pauseConfirm){
+    centerText('マップにもどる？',H*0.27,Math.round(H*0.07),'#ffd23a','#7a4e06');
+    ctx.font=Math.round(H*0.03)+'px "Hiragino Maru Gothic ProN",sans-serif'; ctx.fillStyle='#ffd0c0';
+    ctx.fillText('いまの ステージは さいしょから になります', W/2, H*0.41);
+    const opts=['もどる','つづける'], sel=game.confirmSel|0;
+    const bw=H*0.4,bh=H*0.13,gap=H*0.06,total=bw*2+gap; let x=W/2-total/2; const y=H*0.57;
+    for(let i=0;i<2;i++){ pauseButton(x,y,bw,bh,opts[i],i===sel,i===0); game._pauseHit.push({x,y:y-bh/2,w:bw,h:bh,act:i===0?'confirm-yes':'confirm-no'}); x+=bw+gap; }
+    ctx.font=Math.round(H*0.026)+'px "Hiragino Maru Gothic ProN",sans-serif'; ctx.fillStyle='#cfe0ff'; ctx.fillText('タップ / \u2190 \u2192 でせんたく ・ ジャンプでけってい', W/2, H*0.74);
+    return;
+  }
+  centerText('PAUSE',H*0.27,Math.round(H*0.08),'#ffd23a','#7a4e06');
+  const opts=['つづける','マップにもどる'], sel=game.pauseSel|0;
+  const bw=H*0.46,bh=H*0.13,gap=H*0.05,total=bw*2+gap; let x=W/2-total/2; const y=H*0.53;
+  for(let i=0;i<2;i++){ pauseButton(x,y,bw,bh,opts[i],i===sel,false); game._pauseHit.push({x,y:y-bh/2,w:bw,h:bh,act:i===0?'resume':'retire'}); x+=bw+gap; }
+  ctx.font=Math.round(H*0.026)+'px "Hiragino Maru Gothic ProN",sans-serif'; ctx.fillStyle='#cfe0ff'; ctx.fillText('タップ / \u2190 \u2192 でせんたく ・ ジャンプでけってい', W/2, H*0.74);
 }
 function drawGameOver(){ dim(0.62); const H=canvas.height; centerText('GAME OVER',H*0.4,Math.round(H*0.075),'#ff5d5d','#5a1010'); centerText('SCORE '+pad6(game.score),H*0.54,Math.round(H*0.036),'#fff','#000'); ctx.font=Math.round(H*0.026)+'px "Press Start 2P","Hiragino Maru Gothic ProN",sans-serif'; ctx.fillStyle='#cfe0ff'; ctx.textAlign='center'; if(Math.floor(animClock*2)%2===0) ctx.fillText('ENTER / タップ でリスタート',canvas.width/2,H*0.66); }
 function drawWin(){ dim(0.5); for(const c of game.confetti) c.draw(); const H=canvas.height; const by=H*0.4+Math.sin(animClock*3)*6; centerText('YOU WIN!',by,Math.round(H*0.085),'#ffd23a','#b9780c'); ctx.font=Math.round(H*0.034)+'px "Press Start 2P","Hiragino Maru Gothic ProN",sans-serif'; ctx.textAlign='center'; ctx.fillStyle='#000'; ctx.fillText('クリアおめでとう！',canvas.width/2+1,H*0.55+1); ctx.fillStyle='#fff'; ctx.fillText('クリアおめでとう！',canvas.width/2,H*0.55); centerText('SCORE '+pad6(game.score),H*0.64,Math.round(H*0.03),'#bfe9ff','#000'); ctx.font=Math.round(H*0.024)+'px "Press Start 2P","Hiragino Maru Gothic ProN",sans-serif'; ctx.fillStyle='#cfe0ff'; if(Math.floor(animClock*2)%2===0) ctx.fillText('ENTER / タップ でもう一度',canvas.width/2,H*0.74); }
@@ -232,6 +274,36 @@ function renderTitle(){
   drawSky(th);
   drawTitle();
 }
+
+function drawZones(){ if(!game.zones||!game.zones.length) return; const t=animClock;
+  for(const z of game.zones){
+    if(z.kind==='conveyor'){
+      ctx.save(); ctx.beginPath(); ctx.rect(z.x,z.y-1,z.w,5); ctx.clip();
+      ctx.fillStyle='rgba(255,210,58,0.55)'; const off=((t*40*z.dir)%16+16)%16;
+      for(let x=z.x-16;x<z.x+z.w+16;x+=16){ const cx=x+off; ctx.beginPath();
+        if(z.dir>0){ ctx.moveTo(cx,z.y); ctx.lineTo(cx+5,z.y+2); ctx.lineTo(cx,z.y+4);} else { ctx.moveTo(cx+5,z.y); ctx.lineTo(cx,z.y+2); ctx.lineTo(cx+5,z.y+4);} ctx.fill(); }
+      ctx.restore();
+    } else if(z.kind==='current'){
+      ctx.save(); ctx.globalAlpha=0.5; ctx.strokeStyle='#cdeeff'; ctx.lineWidth=1.6; ctx.lineCap='round';
+      const dx=z.dx||0, dy=z.dy||0, cols=4, rows=4;
+      for(let i=0;i<cols;i++)for(let j=0;j<rows;j++){
+        const baseX=z.x+(i+0.5)*z.w/cols, baseY=z.y+(j+0.5)*z.h/rows;
+        const ph=((t*0.8+ i*0.13 + j*0.21)%1);
+        const ax=baseX + dx*(ph-0.5)*z.w/cols*1.4, ay=baseY + dy*(ph-0.5)*z.h/rows*1.4;
+        ctx.globalAlpha=0.5*(1-Math.abs(ph-0.5)*1.6);
+        ctx.beginPath(); ctx.moveTo(ax-dx*4,ay-dy*4); ctx.lineTo(ax,ay); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax-dx*3+dy*2,ay-dy*3-dx*2); ctx.moveTo(ax,ay); ctx.lineTo(ax-dx*3-dy*2,ay-dy*3+dx*2); ctx.stroke();
+      }
+      ctx.restore();
+    } else if(z.kind==='wind'){
+      ctx.save(); ctx.globalAlpha=0.42; ctx.strokeStyle='#ffffff'; ctx.lineWidth=1.4; ctx.lineCap='round';
+      for(let i=0;i<10;i++){ const len=8+(i%3)*5; const ax=z.x+(((i*61 + t*130*z.dir)%z.w)+z.w)%z.w, ay=z.y+((i*53)%z.h);
+        ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax+z.dir*len,ay); ctx.stroke(); }
+      ctx.restore();
+    }
+  }
+}
+
 function renderStage(){
   ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height);
   const th = game.theme || THEMES.overworld;
@@ -240,7 +312,7 @@ function renderStage(){
   drawMountains(th);
   worldTransform(0.55); drawHills(th);
   worldTransform(0.35); drawClouds(th);
-  worldTransform(1); drawBushes(th); drawTiles(th); drawGoal(th);
+  worldTransform(1); drawBushes(th); drawTiles(th); drawGoal(th); drawZones();
   for(const cp of game.checkpoints) drawCheckpoint(cp);
   for(const pf of game.platforms) pf.draw();
   for(const it of game.items) it.draw();

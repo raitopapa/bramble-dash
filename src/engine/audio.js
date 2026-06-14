@@ -63,6 +63,10 @@ const sfxPause  = ()=> blip({type:'square', f0:600, dur:0.05, vol:0.18});
 const sfxSpring = ()=> { blip({type:'square', f0:280, f1:1000, dur:0.16, vol:0.26}); blip({type:'square', f0:600, f1:1300, dur:0.1, vol:0.18, when:0.05}); };
 const sfxCrumble= ()=> { noiseBurst({filter:'lowpass', freq:1700, dur:0.22, vol:0.34}); blip({type:'square', f0:200, f1:70, dur:0.2, vol:0.2}); };
 const sfxBat    = ()=> blip({type:'triangle', f0:520, f1:360, dur:0.07, vol:0.14});
+const sfxWarp       = ()=> { seq([[988,0.07],[740,0.07],[554,0.07],[415,0.07],[311,0.14]],'triangle',0.24); blip({type:'sine', f0:900, f1:200, dur:0.3, vol:0.16, when:0.02}); };
+const sfxCheckpoint = ()=> { seq([[659,0.08],[988,0.08],[1319,0.18]],'square',0.24); blip({type:'triangle', f0:1500, f1:2000, dur:0.06, vol:0.12, when:0.18}); };
+const sfxBossHit    = ()=> { noiseBurst({filter:'lowpass', freq:800, dur:0.12, vol:0.34}); blip({type:'square', f0:300, f1:140, dur:0.14, vol:0.26}); };
+const sfxBossDown   = ()=> { noiseBurst({filter:'lowpass', freq:1200, dur:0.5, vol:0.4}); seq([[392,0.1],[330,0.1],[262,0.1],[196,0.12],[523,0.12],[659,0.28]],'sawtooth',0.26); };
 function buildSeq(track){
   const cfg=TRACKS[track]||TRACKS.map; SPB=60/cfg.bpm; const chords=cfg.chords;
   seqArr=[]; let tb=0; const e=0.5;
@@ -115,4 +119,4 @@ function startMusic(){
   },30);
 }
 
-export { AC, SPB, audioReady, blip, buildSeq, duckMusic, initAudioOnce, loopBeats, loopStartTime, master, musicGain, musicOn, musicTimer, muted, noiseBurst, ntf, schedIdx, seq, seqArr, setMusicTrack, sfx1up, sfxBat, sfxBreak, sfxBump, sfxClear, sfxCoin, sfxCrumble, sfxDie, sfxFire, sfxFlag, sfxFlagDn, sfxGain, sfxJump, sfxKick, sfxPause, sfxPowerup, sfxShrink, sfxSpring, sfxSprout, sfxStomp, sfxTick, sfxWin, startMusic, toggleMute };
+export { AC, SPB, audioReady, blip, buildSeq, duckMusic, initAudioOnce, loopBeats, loopStartTime, master, musicGain, musicOn, musicTimer, muted, noiseBurst, ntf, schedIdx, seq, seqArr, setMusicTrack, sfx1up, sfxBat, sfxBossDown, sfxBossHit, sfxBreak, sfxBump, sfxClear, sfxCoin, sfxCrumble, sfxDie, sfxFire, sfxFlag, sfxFlagDn, sfxGain, sfxJump, sfxKick, sfxPause, sfxPowerup, sfxShrink, sfxSpring, sfxSprout, sfxCheckpoint, sfxStomp, sfxTick, sfxWarp, sfxWin, startMusic, toggleMute };
