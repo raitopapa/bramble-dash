@@ -1,35 +1,54 @@
 import { ctx, ellipse, rr } from '../engine/canvas.js';
+import { game } from '../game/state.js';
+import { SKINS } from '../core/constants.js';
 
 // ============ CREATURE / SHARED DRAW ============
 let cFlash=0, cWing=0; const RBOW=['#ff5d5d','#ffae3a','#ffe24d','#5fd24a','#42c6ff','#9a72ff','#ff6bd6'];
 function drawCreature(cx, feet, size, form, o){
   o=o||{}; const facing=o.facing||1; const big=form!=='small'; const fire=form==='fire';
-  const C = fire ? {body:'#ff6a4d',top:'#ff8e6e',shade:'#d8392e',belly:'#ffe1d6',spr:'#ffd23a',spr2:'#ff8a2a',out:'#9e2a20',eye:'#2a1410',cheek:'#ff5a4a'}
-                 : {body:'#ff9a3c',top:'#ffb869',shade:'#e8631e',belly:'#ffe6c2',spr:'#5fd24a',spr2:'#36a233',out:'#8a3a16',eye:'#2a1810',cheek:'#ff8a5a'};
-  if(o.star){ cFlash+=0.18; const col=RBOW[Math.floor(cFlash)%RBOW.length]; C.body=col; C.top='#ffffff'; C.shade=col; C.belly='#ffffff'; }
-  let bw=size*(big?0.82:0.9), bh=size; if(o.crouch) bh*=0.74;
-  const sx=o.sx||1, sy=o.sy||1; bw*=sx; bh*=sy; const top=feet-bh;
+  const C = fire ? {body:'#ff6a4d',top:'#ff9e80',shade:'#d8392e',belly:'#ffe1d6',spr:'#ffd23a',spr2:'#ff8a2a',out:'#9e2a20',eye:'#2a1410',cheek:'#ff7a6a',foot:'#c8322a'}
+                 : {body:'#ff9a3c',top:'#ffc488',shade:'#e8631e',belly:'#ffe6c2',spr:'#5fd24a',spr2:'#36a233',out:'#8a3a16',eye:'#2a1810',cheek:'#ff7a52',foot:'#d8541a'};
+  const _sk = SKINS[(game&&game.skin)|0];
+  if(_sk && _sk.pal && !fire){ Object.assign(C, _sk.pal); }
+  if(_sk && _sk.rainbow && !fire){ cFlash+=0.06; const _c=RBOW[Math.floor(cFlash)%RBOW.length]; C.body=_c; C.top='#ffffff'; C.shade=_c; C.foot=_c; }
+  if(o.star){ cFlash+=0.18; const col=RBOW[Math.floor(cFlash)%RBOW.length]; C.body=col; C.top='#ffffff'; C.shade=col; C.belly='#ffffff'; C.foot=col; }
+  // round puffball body (Kirby-style): bw≈bh
+  let d=size*(big?1.02:0.94); const sx=o.sx||1, sy=o.sy||1;
+  let bw=d*sx, bh=d*sy; if(o.crouch){ bh*=0.8; bw*=1.06; }
+  const cyb=feet-bh*0.5, top=feet-bh, rX=bw*0.5, rY=bh*0.5;
   const ph=o.walkPhase||0, wob=Math.sin(ph), air=o.onGround===false;
-  ctx.fillStyle='rgba(0,0,0,0.18)'; ellipse(cx, feet+1.5, bw*0.62, 2.6);
-  if(o.fly){ cWing+=0.35; const fl=Math.sin(air?cWing:ph*2)*0.5; for(const s of [-1,1]){ ctx.save(); ctx.translate(cx+s*bw*0.42, top+bh*0.4); ctx.rotate(s*(0.5+fl)); ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.ellipse(s*4,0,6.5,3.2,0,0,7); ctx.fill(); ctx.strokeStyle='rgba(180,205,230,0.85)'; ctx.lineWidth=0.8; ctx.beginPath(); ctx.ellipse(s*4,0,6.5,3.2,0,0,7); ctx.stroke(); ctx.restore(); } }
-  if(fire){ ctx.save(); ctx.globalAlpha=0.22+0.06*Math.sin(ph*2); ctx.fillStyle='#ffae3a'; ellipse(cx, feet-bh*0.5, bw*1.08, bh*0.9); ctx.restore(); }
-  let lf,rf; if(!air){ lf=wob>0?1.6:0; rf=wob<0?1.6:0; } else { lf=1.4; rf=1.4; }
-  ctx.fillStyle=C.shade; rr(ctx, cx-bw*0.40, feet-3.4-lf, bw*0.30, 3.6, 1.7); ctx.fill(); rr(ctx, cx+bw*0.10, feet-3.4-rf, bw*0.30, 3.6, 1.7); ctx.fill();
-  const sw=wob*1.2; ctx.fillStyle=C.shade; ellipse(cx-bw*0.5, top+bh*0.56+sw, 2.3, 3.1); ellipse(cx+bw*0.5, top+bh*0.56-sw, 2.3, 3.1);
-  const bgY=ctx.createLinearGradient(0,top,0,feet); bgY.addColorStop(0,C.top); bgY.addColorStop(0.52,C.body); bgY.addColorStop(1,C.shade); ctx.fillStyle=bgY;
-  rr(ctx, cx-bw/2, top, bw, bh, Math.min(bw,bh)*0.46); ctx.fill();
-  ctx.fillStyle=C.belly; rr(ctx, cx-bw*0.3, top+bh*0.44, bw*0.6, bh*0.5, bw*0.26); ctx.fill();
-  ctx.save(); ctx.globalAlpha=0.18; ctx.fillStyle=C.shade; rr(ctx, cx-bw/2, top+bh*0.64, bw, bh*0.36, bw*0.3); ctx.fill(); ctx.restore();
-  ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle='rgba(255,255,255,0.8)'; ellipse(cx-bw*0.22, top+bh*0.15, bw*0.2, bh*0.12); ctx.restore();
-  ctx.strokeStyle=C.out; ctx.lineWidth=1.2; rr(ctx, cx-bw/2, top, bw, bh, Math.min(bw,bh)*0.46); ctx.stroke();
-  ctx.save(); ctx.translate(cx, top);
+  ctx.fillStyle='rgba(0,0,0,0.18)'; ellipse(cx, feet+1.0, bw*0.5, 2.4);
+  // wings (fly power-up)
+  if(o.fly){ cWing+=0.35; const fl=Math.sin(air?cWing:ph*2)*0.5; for(const sgn of [-1,1]){ ctx.save(); ctx.translate(cx+sgn*rX*0.92, cyb-bh*0.06); ctx.rotate(sgn*(0.5+fl)); ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.ellipse(sgn*4,0,7,3.4,0,0,7); ctx.fill(); ctx.strokeStyle='rgba(180,205,230,0.85)'; ctx.lineWidth=0.8; ctx.beginPath(); ctx.ellipse(sgn*4,0,7,3.4,0,0,7); ctx.stroke(); ctx.restore(); } }
+  if(fire){ ctx.save(); ctx.globalAlpha=0.22+0.06*Math.sin(ph*2); ctx.fillStyle='#ffae3a'; ellipse(cx, cyb, rX*1.5, rY*1.5); ctx.restore(); }
+  // little oval feet
+  let lf,rf; if(!air){ lf=wob>0?2.0:0; rf=wob<0?2.0:0; } else { lf=2.6; rf=0.8; }
+  const footY=feet-1.4, footW=bw*0.30, footH=bh*0.16;
+  const drawFoot=(fx,fy,rot)=>{ ctx.beginPath(); ctx.ellipse(fx,fy,footW,footH,rot,0,7); ctx.fill(); ctx.beginPath(); ctx.ellipse(fx,fy,footW,footH,rot,0,7); ctx.stroke(); };
+  ctx.fillStyle=C.foot; ctx.strokeStyle=C.out; ctx.lineWidth=1;
+  drawFoot(cx-bw*0.25, footY-lf*0.4, -0.16); drawFoot(cx+bw*0.25, footY-rf*0.4, 0.16);
+  // stubby arms (small ovals at the sides)
+  const armSw=wob*1.6;
+  const drawArm=(ax,ay,rot)=>{ ctx.beginPath(); ctx.ellipse(ax,ay,bw*0.16,bh*0.135,rot,0,7); ctx.fill(); ctx.beginPath(); ctx.ellipse(ax,ay,bw*0.16,bh*0.135,rot,0,7); ctx.stroke(); };
+  ctx.fillStyle=C.body; ctx.strokeStyle=C.out;
+  drawArm(cx-rX*0.96, cyb+armSw, -0.35); drawArm(cx+rX*0.96, cyb-armSw, 0.35);
+  // body
+  const bg=ctx.createRadialGradient(cx-rX*0.32, cyb-rY*0.38, rX*0.18, cx, cyb, rX*1.12);
+  bg.addColorStop(0,C.top); bg.addColorStop(0.58,C.body); bg.addColorStop(1,C.shade);
+  ctx.fillStyle=bg; ctx.beginPath(); ctx.ellipse(cx, cyb, rX, rY, 0, 0, 7); ctx.fill();
+  ctx.save(); ctx.globalAlpha=0.55; ctx.fillStyle=C.belly; ctx.beginPath(); ctx.ellipse(cx, cyb+bh*0.13, rX*0.6, rY*0.55, 0, 0, 7); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle='rgba(255,255,255,0.85)'; ellipse(cx-rX*0.34, cyb-rY*0.5, rX*0.3, rY*0.18); ctx.restore();
+  ctx.strokeStyle=C.out; ctx.lineWidth=1.3; ctx.beginPath(); ctx.ellipse(cx, cyb, rX, rY, 0, 0, 7); ctx.stroke();
+  // sprout on top (keeps Bramble's identity)
+  ctx.save(); ctx.translate(cx, cyb-rY);
   if(fire){ ctx.fillStyle=C.spr; ctx.beginPath(); ctx.moveTo(0,2); ctx.quadraticCurveTo(-3.4,-3,0,-8); ctx.quadraticCurveTo(3.4,-3,0,2); ctx.fill(); ctx.fillStyle=C.spr2; ctx.beginPath(); ctx.moveTo(0,1); ctx.quadraticCurveTo(-1.8,-2,0,-5); ctx.quadraticCurveTo(1.8,-2,0,1); ctx.fill(); }
-  else { ctx.strokeStyle=C.spr2; ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(0,1); ctx.lineTo(0,-3.6); ctx.stroke(); ctx.fillStyle=C.spr; leafShape(-1); leafShape(1); }
+  else { ctx.strokeStyle=C.spr2; ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(0,1); ctx.lineTo(0,-3.8); ctx.stroke(); ctx.fillStyle=C.spr; leafShape(-1); leafShape(1); }
   ctx.restore();
-  const eyeY=top+bh*0.35, eo=bw*0.21, look=facing>0?0.9:-0.9;
+  // face: big tall eyes close together + blush + small mouth
+  const eyeY=cyb-bh*0.05, eo=bw*0.135, look=facing>0?0.9:-0.9;
   drawEyeAt(cx-eo,eyeY,look,o.blink,C.eye); drawEyeAt(cx+eo,eyeY,look,o.blink,C.eye);
-  ctx.strokeStyle=C.out; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(cx+look*0.5,eyeY+bh*0.17,bw*0.14,0.16*Math.PI,0.84*Math.PI); ctx.stroke();
-  ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle=C.cheek; ellipse(cx-bw*0.33,eyeY+bh*0.13,1.7,1.1); ellipse(cx+bw*0.33,eyeY+bh*0.13,1.7,1.1); ctx.restore();
+  ctx.strokeStyle=C.out; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(cx+look*0.4,eyeY+bh*0.15,bw*0.07,0.15*Math.PI,0.85*Math.PI); ctx.stroke();
+  ctx.save(); ctx.globalAlpha=0.6; ctx.fillStyle=C.cheek; ellipse(cx-bw*0.23,eyeY+bh*0.12,bw*0.085,bh*0.05); ellipse(cx+bw*0.23,eyeY+bh*0.12,bw*0.085,bh*0.05); ctx.restore();
 }
 function leafShape(side){ ctx.beginPath(); ctx.ellipse(side*2.2,-3.4,2.4,1.3,side*0.6,0,Math.PI*2); ctx.fill(); }
 function drawEyeAt(x,y,look,blink,eye){ ctx.fillStyle='#fff'; ellipse(x,y,2.9,3.3); if(blink){ ctx.strokeStyle=eye; ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(x-2.4,y); ctx.lineTo(x+2.4,y); ctx.stroke(); } else { ctx.fillStyle=eye; ellipse(x+look,y+0.4,1.35,1.7); ctx.fillStyle='rgba(255,255,255,0.95)'; ellipse(x+look-0.7,y-0.4,0.7,0.7); } }

@@ -97,7 +97,7 @@ async function partA() {
   const env = makeEnv();
   const STEP = (await import('../src/core/constants.js')).STEP;
   const { scenes } = await import('../src/scenes/SceneManager.js');
-  const { game } = await import('../src/game/state.js');
+  const { game, skinUnlocked } = await import('../src/game/state.js');
   const flow = await import('../src/game/flow.js');
   const state = await import('../src/game/state.js');
   const { input } = await import('../src/core/input.js');
@@ -332,6 +332,33 @@ async function partA() {
 
   // bonus warp pipes spawn a warp item in each world's first stage
   for (const idx of [0, 3, 6, 9]) { flow.startLevel(idx); assert(game.items.some(it => it.type === 'warp'), 'world stage ' + idx + ' has a bonus warp pipe'); }
+
+  // gems (new item) + costume unlocks
+  for (const idx of [1, 3, 7, 10]) { flow.startLevel(idx); assert(game.items.some(it => it.type === 'gem'), 'gem present in stage ' + idx); }
+  game.gems = {}; flow.startLevel(1); scenes.sync();
+  { const p = game.player; p.invinc = 999; const gm = game.items.find(it => it.type === 'gem'); assert(gm, 'a gem exists to collect'); p.x = gm.x; p.y = gm.y; step(2); assert(Object.keys(game.gems).length >= 1, 'gem collected into save'); }
+  game.mapCleared = []; game.gems = {};
+  assert(skinUnlocked(0) && !skinUnlocked(1) && !skinUnlocked(5), 'only default costume unlocked at start');
+  game.mapCleared[2] = true; assert(skinUnlocked(1), 'clearing world 1 unlocks the mint costume');
+  game.mapCleared[11] = true; assert(skinUnlocked(4), 'beating the final boss unlocks the gold costume');
+  game.gems = { 1: true, 3: true, 7: true, 10: true }; assert(skinUnlocked(5), 'all 4 gems unlock the rainbow costume');
+  // render title with a costume selected + render player wearing each skin
+  game.skin = 5; game.state = 'title'; scenes.sync(); scenes.render();
+  game.skin = 4; scenes.render(); game.skin = 0; game.state = 'playing';
+
+  // boss attack patterns: the sky boss fires projectiles and charges
+  flow.newGame(); scenes.sync(); game.mapMaxUnlocked = 11; game.mapNode = 8; input.jump = false; step(1); enterFromMap();
+  { const b = game.boss; assert(b, 'sky boss spawned'); game.player.invinc = 999; game.player.x = b.x - 80; game.player.y = b.y;
+    let sawShot = false, sawCharge = false;
+    for (let i = 0; i < 420 && !(sawShot && sawCharge); i++) { step(1); if (game.bossShots.length > 0) sawShot = true; if (b.charging > 0) sawCharge = true; }
+    assert(sawShot, 'boss fires projectiles'); assert(sawCharge, 'boss performs a charge'); }
+  // a boss projectile hurts a vulnerable player
+  flow.newGame(); scenes.sync(); game.mapMaxUnlocked = 11; game.mapNode = 8; input.jump = false; step(1); enterFromMap();
+  { const b = game.boss; const p = game.player; p.invinc = 0; p.star = 0;
+    const before = (game.lives|0);
+    // drop a shot right on the player
+    game.bossShots.push(new E.BossShot(p.x + 8, p.y + 8, 0, 0, 'orb', 0)); step(2);
+    assert((game.lives|0) < before || p.dead || p.invinc > 0, 'a boss shot can hit the player'); }
 
   // boss fight: enter the arena, stomp the boss 3x -> defeat -> victory -> win
   flow.newGame(); scenes.sync(); game.mapMaxUnlocked = 11; game.mapNode = 11; input.jump = false; step(1); enterFromMap();

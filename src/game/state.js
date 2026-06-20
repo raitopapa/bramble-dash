@@ -1,4 +1,4 @@
-import { DIFFICULTY, SPRING_V, THEMES } from '../core/constants.js';
+import { DIFFICULTY, SKINS, SPRING_V, THEMES } from '../core/constants.js';
 import { rand } from '../core/utils.js';
 import { sfx1up, sfxBreak, sfxBump, sfxCoin, sfxSpring, sfxSprout } from '../engine/audio.js';
 import { Fireball, Flower, Mushroom, Particle, PopCoin, Popup } from './entities.js';
@@ -11,13 +11,13 @@ const game = {
   camX:0, camY:0,
   score:0, coins:0, lives:3, time:300,
   enemies:[], items:[], fireballs:[], particles:[], popups:[], popcoins:[], bumps:[],
-  hazards:[], crumbles:[], platforms:[], checkpoints:[], checkpointX:0, boss:null, bossWinTimer:0,
+  hazards:[], crumbles:[], platforms:[], checkpoints:[], checkpointX:0, boss:null, bossShots:[], bossWinTimer:0,
   player:null,
   cleared:false, clearPhase:null, clearTimer:0, holdT:0, fanfarePlayed:false,
   deathTimer:0, confetti:[],
   mapNode:0, mapMaxUnlocked:0, mapCleared:[],
   water:false, inBonus:false, bonusTimer:0, pauseSel:0, pauseConfirm:false, confirmSel:1, _pauseHit:null, _bonus:null, zones:[],
-  difficulty:0, diff:DIFFICULTY[0]
+  difficulty:0, diff:DIFFICULTY[0], gems:{}, skin:0
 };
 
 const SOLID = new Set(['X','S','B','?','!','U','P','T','D']);
@@ -53,6 +53,8 @@ function collideY(e,isPlayer){
   }
 }
 
+function skinUnlocked(i){ const c=game.mapCleared||[]; const gems=Object.keys(game.gems||{}).length;
+  switch(i){ case 0: return true; case 1: return !!c[2]; case 2: return !!c[5]; case 3: return !!c[8]; case 4: return !!c[11]; case 5: return gems>=4; default: return false; } }
 function addScore(n){ game.score+=n; }
 function addCoin(n){ game.coins+=n; while(game.coins>=100){ game.coins-=100; game.lives++; sfx1up(); popupWorld(game.player.x, game.player.y-12, '1UP', '#fff'); } }
 function popupWorld(x,y,text,color){ game.popups.push(new Popup(x,y,text,color||'#fff')); }
@@ -93,4 +95,4 @@ function spawnBrickDebris(tx,ty){ const cx=tx*16+8, cy=ty*16+8, c=game.theme.bri
 function spawnSpark(x,y,color){ for(let i=0;i<5;i++){ const a=Math.random()*Math.PI*2, s=rand(0.6,2); game.particles.push(new Particle(x,y,Math.cos(a)*s,Math.sin(a)*s-0.6,{type:'spark', size:rand(1,2), life:rand(0.25,0.45), g:0.08, color:color||'#ffe79a'})); } }
 function spawnPopCoin(tx,ty){ game.popcoins.push(new PopCoin(tx,ty)); }
 
-export { SOLID, addCoin, addScore, bumpAnim, bumpBlock, bumpEnemiesAbove, bumpOffset, collideX, collideY, countFB, crumbleOffset, game, gget, gset, isSolidCh, killEnemy, popupWorld, solidTile, spawnBrickDebris, spawnDust, spawnFireball, spawnItem, spawnPopCoin, spawnPuff, spawnSpark };
+export { SOLID, addCoin, addScore, bumpAnim, bumpBlock, bumpEnemiesAbove, bumpOffset, collideX, collideY, countFB, crumbleOffset, game, gget, gset, isSolidCh, killEnemy, popupWorld, solidTile, spawnBrickDebris, spawnDust, spawnFireball, spawnItem, spawnPopCoin, spawnPuff, spawnSpark, skinUnlocked };

@@ -40,4 +40,14 @@ const DIFFICULTY = [
   { id:'age3',   name:'とてもやさしい（3さい）', lives:99, timeMul:0.0, enemyMul:0.42, noHurt:true,  noGameOver:true,  startBig:true,  jumpMul:1.20, gravityMul:0.74, fallMul:0.8,  coyoteMul:4.0, bufferMul:4.0, cutKeep:1.0  },
 ];
 
-export { BASE_VIEW_H, COYOTE, DIFFICULTY, GRAVITY, GRAVITY_E, GROWANIM, HOLD_G, INVINC, JBUF, JUMP_V, MAXFALL, SPRING_V, STEP, THEMES, TILE };
+
+const SKINS = [
+  { id:'bramble', name:'ブランブル', sw:'#ff9a3c' },
+  { id:'mint', name:'ミント', sw:'#5fce72', pal:{ body:'#5fce72', top:'#8ee6a0', shade:'#2fa14e', belly:'#e2ffe8', cheek:'#3fae5e', foot:'#2f8f4e', out:'#1d6e36' } },
+  { id:'sora', name:'ソラ', sw:'#5aa6ff', pal:{ body:'#5aa6ff', top:'#8cc4ff', shade:'#2f6fd6', belly:'#e0efff', cheek:'#4a8ae6', foot:'#2f6fd6', out:'#1d4e9e' } },
+  { id:'momo', name:'モモ', sw:'#ff8ad2', pal:{ body:'#ff8ad2', top:'#ffb1e2', shade:'#e6589e', belly:'#ffe6f4', cheek:'#ff6abf', foot:'#d4569e', out:'#a83a76' } },
+  { id:'gold', name:'きんいろ', sw:'#ffd23a', hidden:true, pal:{ body:'#ffd23a', top:'#fff0a8', shade:'#e0a51e', belly:'#fff7d6', cheek:'#ffbe4a', foot:'#cf8f1a', out:'#9c7012' } },
+  { id:'rainbow', name:'にじいろ', sw:'#ff6bd6', hidden:true, rainbow:true },
+];
+
+export { SKINS, BASE_VIEW_H, COYOTE, DIFFICULTY, GRAVITY, GRAVITY_E, GROWANIM, HOLD_G, INVINC, JBUF, JUMP_V, MAXFALL, SPRING_V, STEP, THEMES, TILE };

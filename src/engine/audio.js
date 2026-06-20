@@ -7,7 +7,9 @@ const TRACKS = {
   sky:{ bpm:152, chords:[[62,66,69],[60,64,67],[64,67,71],[59,62,67]] },
   castle:{ bpm:120, chords:[[55,58,62],[54,57,61],[53,56,60],[52,55,59]] },
   boss:{ bpm:150, style:'boss', chords:[[57,60,64],[56,59,63],[55,58,62],[57,60,64]] },
-  map:{ bpm:126, chords:[[60,64,67],[62,65,69],[64,67,71],[59,62,66]] }
+  map:{ bpm:126, chords:[[60,64,67],[62,65,69],[64,67,71],[59,62,66]] },
+  water:{ bpm:112, chords:[[60,64,67],[62,67,71],[64,67,72],[59,62,67]] },
+  bonus:{ bpm:150, chords:[[67,71,74],[65,69,72],[64,67,72],[62,66,69]] }
 };
 function initAudioOnce(){
   if(audioReady){ if(AC.state==='suspended') AC.resume(); return; }
@@ -81,11 +83,22 @@ function buildSeq(track){
     }
     loopBeats=tb; return;
   }
+  // A section
   for(const ch of chords){
     const pat=[ch[0]+12, ch[1]+12, ch[2]+12, ch[1]+12];
     for(let i=0;i<4;i++) seqArr.push({t:tb+i*e, dur:e*0.9, midi:pat[i], voice:'lead'});
     seqArr.push({t:tb, dur:0.9, midi:ch[0]-12, voice:'bass'});
     seqArr.push({t:tb+1, dur:0.9, midi:ch[2]-12, voice:'bass'});
+    tb+=2;
+  }
+  // B section (variation): arpeggio lead + light offbeat sparkle, alternate bass
+  for(const ch of chords){
+    const pat=[ch[2]+12, ch[0]+24, ch[1]+12, ch[2]+12];
+    for(let i=0;i<4;i++) seqArr.push({t:tb+i*e, dur:e*0.8, midi:pat[i], voice:'lead'});
+    seqArr.push({t:tb+0.75, dur:e*0.34, midi:ch[2]+19, voice:'lead'});
+    seqArr.push({t:tb+1.75, dur:e*0.34, midi:ch[0]+24, voice:'lead'});
+    seqArr.push({t:tb, dur:0.9, midi:ch[0]-12, voice:'bass'});
+    seqArr.push({t:tb+1, dur:0.9, midi:ch[1]-12, voice:'bass'});
     tb+=2;
   }
   loopBeats=tb;

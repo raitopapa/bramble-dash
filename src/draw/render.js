@@ -1,9 +1,9 @@
-import { DIFFICULTY, THEMES } from '../core/constants.js';
+import { DIFFICULTY, SKINS, THEMES } from '../core/constants.js';
 import { clamp } from '../core/utils.js';
 import { drawCoin, drawCreature } from './creatures.js';
 import { camH, camW, canvas, ctx, ellipse, rr, worldTransform } from '../engine/canvas.js';
 import { animClock } from '../engine/loop.js';
-import { bumpOffset, crumbleOffset, game, gget, solidTile } from '../game/state.js';
+import { bumpOffset, crumbleOffset, game, gget, skinUnlocked, solidTile } from '../game/state.js';
 
 function drawSky(th){ const W=canvas.width,H=canvas.height,t=animClock;
   const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,th.skyTop); if(th.skyMid) g.addColorStop(0.52,th.skyMid); g.addColorStop(1,th.skyBot); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
@@ -266,6 +266,13 @@ function drawTitle(){
   ctx.font=(ts*0.2)+'px "Hiragino Maru Gothic ProN",sans-serif'; ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.fillText('\u2190 \u2192 でへんこう',W/2,dy+ts*0.4);
   if(Math.floor(t*2)%2===0){ ctx.font=(ts*0.3)+'px "Press Start 2P","Hiragino Maru Gothic ProN",sans-serif'; ctx.fillStyle='#fff'; ctx.fillText('PRESS ENTER  /  タップでスタート',W/2,H*0.66); }
   ctx.font=(ts*0.24)+'px "Hiragino Maru Gothic ProN",sans-serif'; ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillText('\u2190 \u2192 移動  \u30fb  SPACE ジャンプ  \u30fb  X ダッシュ/ファイア',W/2,H*0.74);
+  { const sk=SKINS[game.skin|0]; ctx.textAlign='center'; ctx.font='bold '+(ts*0.26)+'px "Hiragino Maru Gothic ProN",sans-serif'; ctx.fillStyle='#fff';
+    ctx.fillText('きせかえ：'+sk.name+'  \u25b2\u25bc      ジェム '+Object.keys(game.gems||{}).length+'/4', W/2, H*0.82);
+    const n=SKINS.length, gap=W*0.05, x0=W/2-(n-1)*gap/2, sy=H*0.88, swR=H*0.02;
+    for(let i=0;i<n;i++){ const ux=x0+i*gap, on=i===(game.skin|0), unlocked=skinUnlocked(i);
+      ctx.beginPath(); ctx.arc(ux,sy,swR*(on?1.35:1),0,7); ctx.fillStyle=unlocked?SKINS[i].sw:'#5a6070'; ctx.fill();
+      ctx.lineWidth=on?2.5:1; ctx.strokeStyle=on?'#fff':'rgba(0,0,0,0.4)'; ctx.stroke();
+      if(!unlocked){ ctx.fillStyle='#cfd4de'; ctx.font='bold '+(swR*1.5)+'px sans-serif'; ctx.fillText('?',ux,sy+swR*0.55); } } }
 }
 
 function renderTitle(){
@@ -319,6 +326,7 @@ function renderStage(){
   for(const hz of game.hazards) hz.draw();
   for(const e of game.enemies) e.draw();
   if(game.boss) game.boss.draw();
+  for(const sh of game.bossShots) sh.draw();
   for(const f of game.fireballs) f.draw();
   for(const p of game.particles) p.draw();
   if(game.player) game.player.draw();

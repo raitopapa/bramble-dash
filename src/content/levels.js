@@ -28,7 +28,7 @@ function finalize(g,opts){
     spawnX:(opts.spawnTX||2)*16+2, spawnFeetY:gy*16, goalX:(opts.goalTX)*16+8,
     goalGroundY:(opts.goalGroundY!=null?opts.goalGroundY:gy)*16, goalPoleTop:(opts.goalPoleTopY!=null?opts.goalPoleTopY:4)*16,
     water:!!opts.water, platforms:opts.platforms||[],
-    world:opts.world||1, isBoss:!!opts.boss, bossHP:opts.bossHP||3, bossPal:opts.bossPal||null, bossName:opts.bossName||'ボス', zones:opts.zones||[] };
+    world:opts.world||1, isBoss:!!opts.boss, bossHP:opts.bossHP||3, bossPal:opts.bossPal||null, bossName:opts.bossName||'ボス', zones:opts.zones||[], bossAtk:opts.bossAtk||null };
 }
 function buildLevel1(){
   const W=212,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
@@ -85,6 +85,7 @@ function buildLevel2(){
   g.set(48,gy,'T'); g.set(48,8,'o'); g.set(48,7,'o');
   g.set(126,gy-1,'p');
   g.set(108,gy-1,'H');
+  g.set(34,gy-4,'G');
   return finalize(g,{theme:'overworld',time:300,name:'1-2',spawnTX:3,gy,goalTX:212,goalGroundY:gy,goalPoleTopY:4,seed:42,
     platforms:[{tx:43,ty:11,w:3,axis:'h',range:3,speed:0.9}]});
 }
@@ -152,6 +153,7 @@ function buildLevel4(){
   stairUp(g,186,4,gy);
   g.set(34,7,'b'); g.set(86,6,'b'); g.set(150,7,'b');
   g.set(104,gy-1,'H');
+  g.set(30,gy-4,'G');
   return finalize(g,{theme:'cave',time:340,name:'4-2',spawnTX:3,gy,goalTX:202,goalGroundY:gy,goalPoleTopY:4,seed:123,zones:[{tx:8,ty:13,w:8,h:1,kind:'conveyor',dir:1,power:0.55},{tx:50,ty:13,w:8,h:1,kind:'conveyor',dir:-1,power:0.45}]});
 }
 function buildLevel5(){
@@ -247,6 +249,7 @@ function buildLevelWater(){
   // a star reward up high + a wing
   g.set(50,2,'*'); g.set(150,2,'^');
 warpPipe(g,10,gy,2);
+    g.set(72,4,'G');
     return finalize(g,{theme:'water',water:true,time:340,name:'2-1',spawnTX:3,gy,goalTX:W-4,goalGroundY:gy,goalPoleTopY:3,seed:404,zones:[{tx:49,ty:2,w:3,h:9,kind:'current',dy:-1,power:2.0},{tx:100,ty:5,w:18,h:7,kind:'current',dx:1,power:0.35}]});
 }
 function buildBonus(){
@@ -298,7 +301,7 @@ function buildSky2(){
   g.set(176,9,'?'); g.set(178,9,'o'); g.set(180,8,'o'); g.set(184,gy-1,'k');
   g.set(140,gy,'T'); g.set(140,7,'o'); g.set(140,6,'o');
   g.set(72,7,'b'); g.set(150,6,'b');
-  g.set(103,gy-1,'H'); g.set(95,2,'*');
+  g.set(103,gy-1,'H'); g.set(95,2,'*'); g.set(186,gy-4,'G');
   return finalize(g,{theme:'sky',time:330,name:'3-2',spawnTX:3,gy,goalTX:196,goalGroundY:gy,goalPoleTopY:3,seed:521,zones:[{tx:30,ty:5,w:26,h:6,kind:'wind',dir:1,power:0.3},{tx:100,ty:5,w:26,h:6,kind:'wind',dir:-1,power:0.3}],
     platforms:[{tx:89,ty:9,w:3,axis:'v',range:3,speed:0.9},{tx:125,ty:9,w:3,axis:'h',range:3,speed:1.0}]});
 }
@@ -311,12 +314,12 @@ function makeBossArena(o){
   g.set(9,gy-2,'B'); g.set(10,gy-2,'B'); g.set(W-11,gy-2,'B'); g.set(W-10,gy-2,'B');
   if(o.spring){ g.set(6,gy,'T'); g.set(W-7,gy,'T'); }
   g.set(18,gy-1,'O');
-  return finalize(g,{theme:o.theme,water:!!o.water,time:o.time||400,name:o.name,boss:true,world:o.world,bossHP:o.hp,bossPal:o.pal,bossName:o.bossName,spawnTX:3,gy,goalTX:W+3,goalGroundY:gy,goalPoleTopY:3,seed:o.seed,zones:o.zones||[]});
+  return finalize(g,{theme:o.theme,water:!!o.water,time:o.time||400,name:o.name,boss:true,world:o.world,bossHP:o.hp,bossPal:o.pal,bossName:o.bossName,spawnTX:3,gy,goalTX:W+3,goalGroundY:gy,goalPoleTopY:3,seed:o.seed,zones:o.zones||[],bossAtk:o.atk||null});
 }
-function bossW1(){ return makeBossArena({theme:'overworld',world:1,hp:3,name:'1-ボス',bossName:'もりのおやぶん',seed:701}); }
-function bossW2(){ return makeBossArena({theme:'water',water:true,world:2,hp:4,name:'2-ボス',bossName:'うずまきボス',pal:{body:'#3f7fb0',belly:'#cdeefd',horn:'#27607e',brow:'#1d4257'},seed:702,zones:[{tx:2,ty:8,w:30,h:5,kind:'current',dx:1,power:0.22}]}); }
-function bossW3(){ return makeBossArena({theme:'sky',world:3,hp:4,name:'3-ボス',bossName:'かみなりボス',spring:true,pal:{body:'#c75f8f',belly:'#ffd9ea',horn:'#8a3a66',brow:'#6e2a4e'},seed:703,zones:[{tx:2,ty:4,w:30,h:5,kind:'wind',dir:1,power:0.25}]}); }
-function bossW4(){ return makeBossArena({theme:'castle',world:4,hp:6,name:'4-ボス',bossName:'まおうブランブル',pal:{body:'#7a4a9e',belly:'#ead9f5',horn:'#4a2a6a',brow:'#3a1f54'},seed:704,zones:[{tx:2,ty:13,w:14,h:1,kind:'conveyor',dir:1,power:0.45},{tx:18,ty:13,w:14,h:1,kind:'conveyor',dir:-1,power:0.45}]}); }
+function bossW1(){ return makeBossArena({theme:'overworld',world:1,hp:3,name:'1-ボス',bossName:'もりのおやぶん',seed:701,atk:{every:2.6,shoot:{n:1,kind:'acorn',speed:2.4,grav:0.16}}}); }
+function bossW2(){ return makeBossArena({theme:'water',water:true,world:2,hp:4,name:'2-ボス',bossName:'うずまきボス',pal:{body:'#3f7fb0',belly:'#cdeefd',horn:'#27607e',brow:'#1d4257'},seed:702,zones:[{tx:2,ty:8,w:30,h:5,kind:'current',dx:1,power:0.22}],atk:{every:2.3,shoot:{n:3,spread:0.7,kind:'bubble',speed:2.1,grav:-0.015}}}); }
+function bossW3(){ return makeBossArena({theme:'sky',world:3,hp:4,name:'3-ボス',bossName:'かみなりボス',spring:true,pal:{body:'#c75f8f',belly:'#ffd9ea',horn:'#8a3a66',brow:'#6e2a4e'},seed:703,zones:[{tx:2,ty:4,w:30,h:5,kind:'wind',dir:1,power:0.25}],atk:{every:2.0,shoot:{n:1,kind:'bolt',speed:3.8,grav:0},charge:{speed:5.5,dur:0.85}}}); }
+function bossW4(){ return makeBossArena({theme:'castle',world:4,hp:6,name:'4-ボス',bossName:'まおうブランブル',pal:{body:'#7a4a9e',belly:'#ead9f5',horn:'#4a2a6a',brow:'#3a1f54'},seed:704,zones:[{tx:2,ty:13,w:14,h:1,kind:'conveyor',dir:1,power:0.45},{tx:18,ty:13,w:14,h:1,kind:'conveyor',dir:-1,power:0.45}],atk:{every:1.7,shoot:{n:3,spread:0.8,kind:'orb',speed:3.0,grav:0},charge:{speed:6.2,dur:1.0}}}); }
 
 const LEVELS=[
   buildLevel1, buildLevel2, bossW1,

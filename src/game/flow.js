@@ -4,20 +4,20 @@ import { edge, input } from '../core/input.js';
 import { aabb, clamp, lerp, rand } from '../core/utils.js';
 import { duckMusic, setMusicTrack, sfx1up, sfxBossDown, sfxBossHit, sfxCheckpoint, sfxClear, sfxCoin, sfxCrumble, sfxFlag, sfxFlagDn, sfxKick, sfxPause, sfxPowerup, sfxStomp, sfxTick, sfxWarp, sfxWin } from '../engine/audio.js';
 import { camH, camW, canvas } from '../engine/canvas.js';
-import { Bat, Boss, Chomper, FireBar, MovingPlatform, Particle, Player, Shellback, Spiker, Star, Stomper, WarpGate, Wing } from './entities.js';
+import { Bat, Boss, Chomper, FireBar, MovingPlatform, Particle, Player, Shellback, Spiker, Star, Stomper, WarpGate, Wing, Gem } from './entities.js';
 import { addCoin, addScore, collideX, collideY, game, gget, gset, killEnemy, popupWorld, spawnBrickDebris, spawnPuff, spawnSpark } from './state.js';
 
 // ============ GAME FLOW ============
 function newGame(){ game.diff=DIFFICULTY[game.difficulty]||DIFFICULTY[0]; if(!game.player) game.player=new Player(); if(game.lives<=0) game.lives=game.diff.lives; game.player.form=game.diff.startBig?'big':'small'; game.confetti=[]; game.mapNode=Math.max(0, Math.min(game.mapMaxUnlocked|0, LEVELS.length-1)); game.state='worldmap'; setMusicTrack('map'); duckMusic(1); }
-function saveProgress(){ try{ localStorage.setItem('brambleDash.save', JSON.stringify({ cleared:game.mapCleared, unlocked:game.mapMaxUnlocked, coins:game.coins, lives:Math.max(0,game.lives), score:game.score, difficulty:game.difficulty })); }catch(e){} }
-function loadProgress(){ try{ const s=localStorage.getItem('brambleDash.save'); if(!s) return; const d=JSON.parse(s); if(Array.isArray(d.cleared)) game.mapCleared=d.cleared; if(typeof d.unlocked==='number') game.mapMaxUnlocked=d.unlocked; if(typeof d.coins==='number') game.coins=d.coins; if(typeof d.lives==='number') game.lives=d.lives; if(typeof d.score==='number') game.score=d.score; if(typeof d.difficulty==='number'){ game.difficulty=Math.max(0,Math.min(d.difficulty,DIFFICULTY.length-1)); game.diff=DIFFICULTY[game.difficulty]; } }catch(e){} }
+function saveProgress(){ try{ localStorage.setItem('brambleDash.save', JSON.stringify({ cleared:game.mapCleared, unlocked:game.mapMaxUnlocked, coins:game.coins, lives:Math.max(0,game.lives), score:game.score, difficulty:game.difficulty, gems:Object.keys(game.gems||{}).map(Number), skin:game.skin|0 })); }catch(e){} }
+function loadProgress(){ try{ const s=localStorage.getItem('brambleDash.save'); if(!s) return; const d=JSON.parse(s); if(Array.isArray(d.cleared)) game.mapCleared=d.cleared; if(typeof d.unlocked==='number') game.mapMaxUnlocked=d.unlocked; if(typeof d.coins==='number') game.coins=d.coins; if(typeof d.lives==='number') game.lives=d.lives; if(typeof d.score==='number') game.score=d.score; if(typeof d.difficulty==='number'){ game.difficulty=Math.max(0,Math.min(d.difficulty,DIFFICULTY.length-1)); game.diff=DIFFICULTY[game.difficulty]; } if(Array.isArray(d.gems)){ game.gems={}; for(const k of d.gems) game.gems[k]=true; } if(typeof d.skin==='number') game.skin=d.skin|0; }catch(e){} }
 function startLevel(idx, respawn){
   const lvl=LEVELS[idx]();
   game.diff=DIFFICULTY[game.difficulty]||DIFFICULTY[0];
   game.levelIndex=idx; game.level=lvl; game.grid=lvl.grid; game.theme=lvl.theme;
   game.worldW=lvl.grid.w*16; game.worldH=lvl.grid.h*16;
   game.goalX=lvl.goalX; game.goalGroundY=lvl.goalGroundY; game.goalPoleTop=lvl.goalPoleTop;
-  game.enemies=[]; game.items=[]; game.fireballs=[]; game.particles=[]; game.popups=[]; game.popcoins=[]; game.bumps=[]; game.hazards=[]; game.crumbles=[]; game.platforms=[]; game.checkpoints=[]; game.boss=null; game.bossWinTimer=0; game.pauseConfirm=false;
+  game.enemies=[]; game.items=[]; game.fireballs=[]; game.particles=[]; game.popups=[]; game.popcoins=[]; game.bumps=[]; game.hazards=[]; game.crumbles=[]; game.platforms=[]; game.checkpoints=[]; game.boss=null; game.bossShots=[]; game.bossWinTimer=0; game.pauseConfirm=false;
   game.water=!!lvl.water; game.inBonus=false; game.bonusTimer=0; game._bonus=null;
   game.zones=(lvl.zones||[]).map(z=>({x:z.tx*16,y:z.ty*16,w:z.w*16,h:z.h*16,kind:z.kind,dir:z.dir||0,dx:z.dx||0,dy:z.dy||0,power:z.power||0.4}));
   const g=lvl.grid;
@@ -33,10 +33,11 @@ function startLevel(idx, respawn){
     else if(c==='*'){ const s=new Star(x,y); s.state='idle'; s.baseY=y*16; game.items.push(s); g.c[y][x]=' '; }
     else if(c==='^'){ const w=new Wing(x,y); w.state='idle'; w.baseY=y*16; game.items.push(w); g.c[y][x]=' '; }
     else if(c==='N'){ game.items.push(new WarpGate(x,y)); g.c[y][x]=' '; }
+    else if(c==='G'){ const gm=new Gem(x,y); gm.lvl=game.levelIndex; game.items.push(gm); g.c[y][x]=' '; }
   }
   game.platforms = (lvl.platforms||[]).map(d=>new MovingPlatform(d));
   if(!respawn) game.checkpointX = lvl.spawnX;
-  if(game.boss){ const hp=lvl.bossHP||3; game.boss.hp=hp; game.boss.maxhp=hp; game.boss.pal=lvl.bossPal||null; game.boss.name=lvl.bossName||'ボス'; }
+  if(game.boss){ const hp=lvl.bossHP||3; game.boss.hp=hp; game.boss.maxhp=hp; game.boss.pal=lvl.bossPal||null; game.boss.name=lvl.bossName||'ボス'; game.boss.pattern=lvl.bossAtk||null; game.boss.atkT=(lvl.bossAtk&&lvl.bossAtk.every)||2.4; }
   setMusicTrack(game.boss ? 'boss' : (lvl.themeName||'overworld'));
   game.time=lvl.time; game.cleared=false; game.clearPhase=null; game.clearTimer=0; game.holdT=0; game.fanfarePlayed=false; game.deathTimer=0;
   if(!game.player) game.player=new Player();
@@ -46,6 +47,11 @@ function startLevel(idx, respawn){
   const cyMin=Math.min(0,game.worldH-camH), cyMax=Math.max(0,game.worldH-camH);
   game.camY=clamp(game.player.y-camH*0.55,cyMin,cyMax);
   game.state='playing'; duckMusic(1);
+}
+function collectGem(lvl){ if(!game.gems) game.gems={}; game.gems[lvl]=true; const n=Object.keys(game.gems).length;
+  addScore(2000); popupWorld(game.player.x, game.player.y-14, 'ジェム '+n+'/4', '#9be8ff'); sfxPowerup();
+  if(n>=4) popupWorld(game.player.x, game.player.y-28, 'にじいろ かいほう！', '#ff8ad2');
+  saveProgress();
 }
 function nextLevel(){ const idx=game.levelIndex; if(game.mapCleared) game.mapCleared[idx]=true; const ni=idx+1; if(ni>=LEVELS.length){ game.state='win'; duckMusic(0); sfxWin(); } else { game.mapMaxUnlocked=Math.max(game.mapMaxUnlocked|0, ni); game.mapNode=ni; game.state='worldmap'; setMusicTrack('map'); duckMusic(1); } saveProgress(); }
 function bossDefeated(){ const b=game.boss; game.bossWinTimer=1.8; sfxBossDown(); addScore(3000); popupWorld(b.x+b.w/2,b.y-18,'3000','#ffd34d'); const cs=['#ffd34d','#9effa0','#7cc0ff','#ff9ad2']; for(let i=0;i<26;i++) game.particles.push(new Particle(b.x+b.w/2,b.y+b.h/2, rand(-3,3), rand(-4.5,-0.5), {type:'spark', size:rand(2,3.5), life:rand(0.5,0.95), g:0.12, color:cs[i%cs.length]})); }
@@ -121,7 +127,7 @@ function updatePlaying(dt){
   if(game.state!=='playing') return;
   for(const pf of game.platforms){ if(p.vy>=0){ const feet=p.y+p.h, overX=(p.x+p.w>pf.x && p.x<pf.x+pf.w); if(overX && feet>=pf.y-3 && feet<=pf.y+pf.h+6){ p.y=pf.y-p.h; p.vy=0; p.onGround=true; p._hitD=true; p.riding=pf; } } }
   for(const cp of game.checkpoints){ if(!cp.active && (p.x+p.w/2)>=cp.x){ cp.active=true; game.checkpointX=cp.x; popupWorld(cp.x, cp.y-18, 'CHECK!', '#9effa0'); sfxCheckpoint(); } }
-  for(const it of game.items){ it.update(dt); if(it.dead) continue; if(aabb(p,it)){ if(it.type==='mushroom'){ if(p.form==='small') p.grow(); addScore(1000); popupWorld(it.x,it.y-4,'1000'); it.dead=true; } else if(it.type==='flower'){ p.toFire(); addScore(1000); popupWorld(it.x,it.y-4,'1000'); it.dead=true; } else if(it.type==='star'){ p.star=Math.max(p.star,9); p.invinc=Math.max(p.invinc,0.3); addScore(1000); popupWorld(it.x,it.y-4,'STAR!','#ffe24d'); it.dead=true; sfxPowerup(); } else if(it.type==='wing'){ p.fly=Math.max(p.fly,9); addScore(1000); popupWorld(it.x,it.y-4,'FLY!','#bfe9ff'); it.dead=true; sfxPowerup(); } else if(it.type==='warp'){ it.dead=true; sfxWarp(); enterBonus(); return; } } }
+  for(const it of game.items){ it.update(dt); if(it.dead) continue; if(aabb(p,it)){ if(it.type==='mushroom'){ if(p.form==='small') p.grow(); addScore(1000); popupWorld(it.x,it.y-4,'1000'); it.dead=true; } else if(it.type==='flower'){ p.toFire(); addScore(1000); popupWorld(it.x,it.y-4,'1000'); it.dead=true; } else if(it.type==='star'){ p.star=Math.max(p.star,9); p.invinc=Math.max(p.invinc,0.3); addScore(1000); popupWorld(it.x,it.y-4,'STAR!','#ffe24d'); it.dead=true; sfxPowerup(); } else if(it.type==='wing'){ p.fly=Math.max(p.fly,9); addScore(1000); popupWorld(it.x,it.y-4,'FLY!','#bfe9ff'); it.dead=true; sfxPowerup(); } else if(it.type==='warp'){ it.dead=true; sfxWarp(); enterBonus(); return; } else if(it.type==='gem'){ it.dead=true; collectGem(it.lvl); } } }
   for(const e of game.enemies) e.update(dt);
   for(const e of game.enemies){ if(e.dead)continue; if(e.type==='shellback'&&e.state==='slide'){ for(const o of game.enemies){ if(o===e||o.dead||(o.squash&&o.squash>0)||o.type==='chomper')continue; if(aabb(e,o)){ killEnemy(o); addScore(200); popupWorld(o.x,o.y-4,'200'); sfxKick(); } } } }
   resolvePlayerEnemies();
@@ -137,6 +143,12 @@ function updatePlaying(dt){
       game.bossWinTimer-=dt;
       if(game.bossWinTimer<=0 && game.state==='playing'){ game.state='levelclear'; game.cleared=true; game.clearPhase='tally'; game.clearTimer=0; game.holdT=0; if(!game.fanfarePlayed){ sfxClear(); game.fanfarePlayed=true; } duckMusic(0); }
     }
+  }
+  if(game.bossShots.length){
+    for(const sh of game.bossShots) sh.update(dt);
+    for(const sh of game.bossShots){ if(sh.dead)continue; if(aabb(sh,p)){ if(p.star>0){ sh.dead=true; } else if(p.invinc<=0){ sh.dead=true; p.hurt(); if(p.dead) return; } } }
+    for(const fb of game.fireballs){ if(fb.dead)continue; for(const sh of game.bossShots){ if(sh.dead)continue; if(aabb(fb,sh)){ fb.dead=true; sh.dead=true; spawnSpark(sh.cx,sh.cy,'#ffd34d'); } } }
+    game.bossShots=game.bossShots.filter(s=>!s.dead);
   }
   if(game.state!=='playing') return;
   for(const hz of game.hazards) hz.update(dt);
@@ -159,26 +171,26 @@ function enterBonus(){
   const p=game.player;
   game._bonus={ grid:game.grid, level:game.level, theme:game.theme, worldW:game.worldW, worldH:game.worldH,
     goalX:game.goalX, goalGroundY:game.goalGroundY, goalPoleTop:game.goalPoleTop,
-    enemies:game.enemies, items:game.items, fireballs:game.fireballs, particles:game.particles, popups:game.popups, popcoins:game.popcoins, bumps:game.bumps, hazards:game.hazards, crumbles:game.crumbles, platforms:game.platforms, checkpoints:game.checkpoints, checkpointX:game.checkpointX, boss:game.boss,
+    enemies:game.enemies, items:game.items, fireballs:game.fireballs, particles:game.particles, popups:game.popups, popcoins:game.popcoins, bumps:game.bumps, hazards:game.hazards, crumbles:game.crumbles, platforms:game.platforms, checkpoints:game.checkpoints, checkpointX:game.checkpointX, boss:game.boss, bossShots:game.bossShots,
     camX:game.camX, camY:game.camY, time:game.time, levelIndex:game.levelIndex, water:game.water, zones:game.zones, px:p.x, py:p.y, form:p.form };
   const b=buildBonus();
   game.level=b; game.grid=b.grid; game.theme=b.theme; game.worldW=b.grid.w*16; game.worldH=b.grid.h*16;
   game.goalX=99999; game.goalGroundY=b.goalGroundY; game.goalPoleTop=b.goalPoleTop;
-  game.enemies=[]; game.items=[]; game.fireballs=[]; game.particles=[]; game.popups=[]; game.popcoins=[]; game.bumps=[]; game.hazards=[]; game.crumbles=[]; game.platforms=[]; game.checkpoints=[]; game.boss=null;
+  game.enemies=[]; game.items=[]; game.fireballs=[]; game.particles=[]; game.popups=[]; game.popcoins=[]; game.bumps=[]; game.hazards=[]; game.crumbles=[]; game.platforms=[]; game.checkpoints=[]; game.boss=null; game.bossShots=[];
   game.water=false; game.zones=[]; game.inBonus=true; game.bonusTimer=12;
   p.x=b.spawnX; p.y=b.spawnFeetY-p.h; p.vx=0; p.vy=0; p.onGround=false; p.star=0; p.fly=0;
-  game.camX=0; game.camY=0; setMusicTrack('sky'); duckMusic(1); sfxPowerup();
+  game.camX=0; game.camY=0; setMusicTrack('bonus'); duckMusic(1); sfxPowerup();
 }
 function exitBonus(){ const s=game._bonus; if(!s){ game.inBonus=false; return; } const p=game.player;
   game.grid=s.grid; game.level=s.level; game.theme=s.theme; game.worldW=s.worldW; game.worldH=s.worldH;
   game.goalX=s.goalX; game.goalGroundY=s.goalGroundY; game.goalPoleTop=s.goalPoleTop;
-  game.enemies=s.enemies; game.items=s.items; game.fireballs=s.fireballs; game.particles=s.particles; game.popups=s.popups; game.popcoins=s.popcoins; game.bumps=s.bumps; game.hazards=s.hazards; game.crumbles=s.crumbles; game.platforms=s.platforms; game.checkpoints=s.checkpoints; game.checkpointX=s.checkpointX; game.boss=s.boss;
+  game.enemies=s.enemies; game.items=s.items; game.fireballs=s.fireballs; game.particles=s.particles; game.popups=s.popups; game.popcoins=s.popcoins; game.bumps=s.bumps; game.hazards=s.hazards; game.crumbles=s.crumbles; game.platforms=s.platforms; game.checkpoints=s.checkpoints; game.checkpointX=s.checkpointX; game.boss=s.boss; game.bossShots=s.bossShots||[];
   game.levelIndex=s.levelIndex; game.water=s.water; game.zones=s.zones||[]; game.time=s.time;
   p.form=s.form; p.sizeFromForm(); p.x=s.px; p.y=s.py; p.vx=0; p.vy=0;
   game.camX=s.camX; game.camY=s.camY; game.inBonus=false; game.bonusTimer=0; game._bonus=null;
   setMusicTrack(game.level.themeName||'overworld'); duckMusic(1);
 }
-function returnToMap(){ game.inBonus=false; game.bonusTimer=0; game._bonus=null; game.water=false; game.zones=[]; const p=game.player; if(p){ p.star=0; p.fly=0; } game.state='worldmap'; game.mapNode=Math.max(0,Math.min(game.mapNode|0,LEVELS.length-1)); setMusicTrack('map'); duckMusic(1); saveProgress(); }
+function returnToMap(){ game.inBonus=false; game.bonusTimer=0; game._bonus=null; game.water=false; game.zones=[]; game.bossShots=[]; const p=game.player; if(p){ p.star=0; p.fly=0; } game.state='worldmap'; game.mapNode=Math.max(0,Math.min(game.mapNode|0,LEVELS.length-1)); setMusicTrack('map'); duckMusic(1); saveProgress(); }
 function updateMenu(dt){
   if(edge.start||edge.jump||game.oneShotStart){ game.oneShotStart=false; newGame(); return; }
   game.oneShotStart=false;
@@ -188,4 +200,4 @@ function updateMenu(dt){
   }
 }
 
-export { collectCoins, cull, doStompBounce, enterBonus, exitBonus, loadProgress, newGame, nextLevel, resolvePlayerEnemies, returnToMap, saveProgress, startClear, startLevel, stompReward, updateCamera, updateClear, updateDying, updateMenu, updateParticlesOnly, updatePlaying };
+export { collectCoins, cull, doStompBounce, enterBonus, exitBonus, loadProgress, newGame, nextLevel, resolvePlayerEnemies, returnToMap, saveProgress, startClear, startLevel, stompReward, updateCamera, updateClear, updateDying, updateMenu, updateParticlesOnly, updatePlaying, collectGem };
