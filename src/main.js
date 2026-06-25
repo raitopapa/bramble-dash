@@ -2,7 +2,7 @@ import { duckMusic, initAudioOnce, sfxPause, toggleMute } from './engine/audio.j
 import { canvas, resize, stage } from './engine/canvas.js';
 import { startLoop } from './engine/loop.js';
 import { game } from './game/state.js';
-import { loadProgress, returnToMap } from './game/flow.js';
+import { hasSave, loadProgress, returnToMap, wipeSave } from './game/flow.js';
 import { scenes } from './scenes/SceneManager.js';
 
 function openPause(){ if(game.state==='playing'){ game.state='paused'; game.pauseSel=0; game.pauseConfirm=false; duckMusic(0); sfxPause(); } }
@@ -18,6 +18,12 @@ canvas.addEventListener('pointerdown', (e)=>{
   initAudioOnce();
   if(game.state==='title'||game.state==='gameover'||game.state==='win'){ game.oneShotStart=true; return; }
   // tappable pause menu
+  if(game.state==='opening' && game._openHit){
+    const r=canvas.getBoundingClientRect(); const sx=canvas.width/(r.width||1), sy=canvas.height/(r.height||1);
+    const px=(e.clientX-r.left)*sx, py=(e.clientY-r.top)*sy;
+    for(const h of game._openHit){ if(px>=h.x&&px<=h.x+h.w&&py>=h.y&&py<=h.y+h.h){ if(h.act==='new'){ wipeSave(); } else { loadProgress(); } game.state='title'; break; } }
+    return;
+  }
   if(game.state==='paused' && game._pauseHit){
     const r=canvas.getBoundingClientRect();
     const sx=canvas.width/(r.width||1), sy=canvas.height/(r.height||1);
@@ -33,7 +39,7 @@ document.getElementById('fsBtn').addEventListener('click', ()=>{
   else if(document.exitFullscreen) document.exitFullscreen();
 });
 
-loadProgress();
-scenes.set('title');
+game.state='opening';
+scenes.set('opening');
 resize();
 startLoop();

@@ -1,16 +1,8 @@
-import { canvas, ctx } from '../engine/canvas.js';
+import { STEP } from '../core/constants.js';
+import { scenes } from '../scenes/SceneManager.js';
 
-class CutsceneScene{
-  update(dt){}
-  render(){
-    ctx.setTransform(1,0,0,1,0,0);
-    ctx.fillStyle='#10183a'; ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle='#cfe0ff'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.font=Math.round(canvas.height*0.05)+'px "Press Start 2P", monospace';
-    ctx.fillText('CUTSCENE', canvas.width/2, canvas.height*0.42);
-    ctx.font=Math.round(canvas.height*0.03)+'px "Press Start 2P","Hiragino Maru Gothic ProN",sans-serif';
-    ctx.fillText('準備中', canvas.width/2, canvas.height*0.56);
-  }
-}
+let animClock = 0, last = 0, acc = 0;
+function frame(t){ if(!last) last=t; let dt=(t-last)/1000; last=t; if(dt>0.1)dt=0.1; animClock+=dt; acc+=dt; let steps=0; while(acc>=STEP && steps<5){ scenes.update(STEP); acc-=STEP; steps++; } if(acc>STEP) acc=0; scenes.render(); requestAnimationFrame(frame); }
+function startLoop(){ requestAnimationFrame(frame); }
 
-export { CutsceneScene };
+export { acc, animClock, frame, last, startLoop };

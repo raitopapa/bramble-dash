@@ -29,6 +29,7 @@ const ORDER = [
   'scenes/CutsceneScene.js',
   'scenes/TitleScene.js',
   'scenes/StageScene.js',
+  'scenes/OpeningScene.js',
   'scenes/SceneManager.js',
   'engine/loop.js',
   'core/input.js',

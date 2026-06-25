@@ -245,6 +245,16 @@ function drawClearOverlay(){ const H=canvas.height, W=canvas.width, t=animClock;
     ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillText('タイムボーナス', W/2+1, H*0.52+1); ctx.fillStyle='#fff'; ctx.fillText('タイムボーナス', W/2, H*0.52);
     ctx.font=Math.round(H*0.032)+'px "Press Start 2P","Baloo 2",monospace'; ctx.fillStyle='#ffd23a'; ctx.fillText('SCORE '+pad6(game.score), W/2, H*0.6); }
 }
+function drawTraitIcon(cx,cy,r,type,col){
+  ctx.save(); ctx.lineWidth=Math.max(1.5,r*0.24); ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineJoin='round'; ctx.lineCap='round';
+  if(type==='jump'){ ctx.beginPath(); ctx.moveTo(cx,cy-r); ctx.lineTo(cx,cy+r*0.85); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx-r*0.6,cy-r*0.3); ctx.lineTo(cx,cy-r); ctx.lineTo(cx+r*0.6,cy-r*0.3); ctx.stroke(); }
+  else if(type==='speed'){ for(const dx of [-r*0.5, r*0.1]){ ctx.beginPath(); ctx.moveTo(cx+dx-r*0.2,cy-r*0.65); ctx.lineTo(cx+dx+r*0.45,cy); ctx.lineTo(cx+dx-r*0.2,cy+r*0.65); ctx.stroke(); } }
+  else if(type==='float'){ ctx.beginPath(); ctx.arc(cx-r*0.42,cy-r*0.12,r*0.42,0,7); ctx.arc(cx+r*0.08,cy-r*0.38,r*0.48,0,7); ctx.arc(cx+r*0.55,cy-r*0.05,r*0.4,0,7); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(cx,cy+r*0.45); ctx.lineTo(cx,cy+r); ctx.moveTo(cx-r*0.32,cy+r*0.7); ctx.lineTo(cx,cy+r); ctx.lineTo(cx+r*0.32,cy+r*0.7); ctx.stroke(); }
+  else if(type==='star'){ ctx.beginPath(); for(let i=0;i<10;i++){ const a=-Math.PI/2+i*Math.PI/5, rr2=(i%2)?r*0.45:r; const x=cx+Math.cos(a)*rr2,y=cy+Math.sin(a)*rr2; i?ctx.lineTo(x,y):ctx.moveTo(x,y); } ctx.closePath(); ctx.fill(); }
+  else if(type==='sparkle'){ ctx.beginPath(); for(let i=0;i<4;i++){ const a=i/4*Math.PI*2; ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r); } ctx.stroke(); ctx.beginPath(); ctx.arc(cx,cy,r*0.2,0,7); ctx.fill(); }
+  else { for(const dx of [-r*0.6,0,r*0.6]){ ctx.beginPath(); ctx.arc(cx+dx,cy,r*0.22,0,7); ctx.fill(); } }
+  ctx.restore();
+}
 function drawTitle(){
   const W=canvas.width,H=canvas.height,t=animClock;
   ctx.fillStyle='rgba(255,255,255,0.92)'; for(let i=0;i<4;i++){ const x=((i*0.27+t*0.012)%1)*W, y=H*(0.12+i*0.07), r=H*0.03; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.arc(x+r,y+r*0.3,r*0.8,0,7); ctx.arc(x-r,y+r*0.3,r*0.8,0,7); ctx.fill(); ctx.fillRect(x-r*2,y+r*0.4,r*4,r*0.8); }
@@ -266,8 +276,11 @@ function drawTitle(){
   ctx.font=(ts*0.2)+'px "Hiragino Maru Gothic ProN",sans-serif'; ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.fillText('\u2190 \u2192 でへんこう',W/2,dy+ts*0.4);
   if(Math.floor(t*2)%2===0){ ctx.font=(ts*0.3)+'px "Press Start 2P","Hiragino Maru Gothic ProN",sans-serif'; ctx.fillStyle='#fff'; ctx.fillText('PRESS ENTER  /  タップでスタート',W/2,H*0.66); }
   ctx.font=(ts*0.24)+'px "Hiragino Maru Gothic ProN",sans-serif'; ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillText('\u2190 \u2192 移動  \u30fb  SPACE ジャンプ  \u30fb  X ダッシュ/ファイア',W/2,H*0.74);
-  { const sk=SKINS[game.skin|0]; ctx.textAlign='center'; ctx.font='bold '+(ts*0.26)+'px "Hiragino Maru Gothic ProN",sans-serif'; ctx.fillStyle='#fff';
-    ctx.fillText('きせかえ：'+sk.name+'  \u25b2\u25bc      ジェム '+Object.keys(game.gems||{}).length+'/4', W/2, H*0.82);
+  { const sk=SKINS[game.skin|0]; ctx.font='bold '+(ts*0.26)+'px "Hiragino Maru Gothic ProN",sans-serif'; ctx.fillStyle='#fff';
+    const full='キャラ：'+sk.name+'（'+sk.trait+'）   \u25b2\u25bc    ジェム '+Object.keys(game.gems||{}).length+'/4';
+    const iconR=H*0.018, tw=ctx.measureText(full).width, ix=W/2-tw/2;
+    drawTraitIcon(ix+iconR*0.6, H*0.82-ts*0.1, iconR, sk.icon, sk.sw);
+    ctx.textAlign='left'; ctx.fillText(full, ix+iconR*1.8, H*0.82); ctx.textAlign='center';
     const n=SKINS.length, gap=W*0.05, x0=W/2-(n-1)*gap/2, sy=H*0.88, swR=H*0.02;
     for(let i=0;i<n;i++){ const ux=x0+i*gap, on=i===(game.skin|0), unlocked=skinUnlocked(i);
       ctx.beginPath(); ctx.arc(ux,sy,swR*(on?1.35:1),0,7); ctx.fillStyle=unlocked?SKINS[i].sw:'#5a6070'; ctx.fill();
@@ -275,6 +288,41 @@ function drawTitle(){
       if(!unlocked){ ctx.fillStyle='#cfd4de'; ctx.font='bold '+(swR*1.5)+'px sans-serif'; ctx.fillText('?',ux,sy+swR*0.55); } } }
 }
 
+function renderOpening(sel, canLoad){
+  const W=canvas.width, H=canvas.height, t=animClock;
+  const th=THEMES.overworld;
+  const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,th.skyTop||'#8fd0ff'); g.addColorStop(1,th.skyBot||'#dff4ff');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#7ec96a'; ctx.fillRect(0,H*0.82,W,H*0.18); ctx.fillStyle='#69b557'; ctx.fillRect(0,H*0.82,W,H*0.014);
+  // clouds
+  ctx.fillStyle='rgba(255,255,255,0.85)';
+  for(let i=0;i<3;i++){ const cx=((i*340 - t*10)%(W+200)+W+200)%(W+200)-100, cy=H*(0.16+i*0.06); ellipse(cx,cy,26,12); ellipse(cx+22,cy+3,20,10); ellipse(cx-20,cy+4,18,9); }
+  ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  ctx.font='bold '+Math.round(H*0.11)+'px "Baloo 2","Hiragino Maru Gothic ProN",sans-serif';
+  ctx.fillStyle='rgba(90,40,0,0.35)'; ctx.fillText('ブランブル', W/2+3, H*0.30+3);
+  ctx.lineWidth=Math.max(2,H*0.012); ctx.strokeStyle='#9e3f12'; ctx.strokeText('ブランブル', W/2, H*0.30);
+  ctx.fillStyle='#ffd23a'; ctx.fillText('ブランブル', W/2, H*0.30);
+  ctx.fillStyle='#2f6a3a'; ctx.font='bold '+Math.round(H*0.05)+'px "Hiragino Maru Gothic ProN",sans-serif'; ctx.fillText('のぼうけん', W/2, H*0.40);
+  drawCreature(W*0.5, H*0.66, H*0.15, 'small', {facing:1, walkPhase:t*4, blink:(t%3>2.85), onGround:true});
+  game._openHit=[];
+  const opts=[{lbl:'はじめから',act:'new',dis:false},{lbl:'つづきから',act:'load',dis:!canLoad}];
+  const bw=H*0.4, bh=H*0.13, gap=H*0.06, total=bw*2+gap; let x=W/2-total/2; const y=H*0.78;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  for(let i=0;i<2;i++){ const o=opts[i];
+    if(o.dis){
+      ctx.fillStyle='rgba(70,76,90,0.7)'; rr(ctx,x,y-bh/2,bw,bh,bh*0.28); ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.lineWidth=2; rr(ctx,x,y-bh/2,bw,bh,bh*0.28); ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='bold '+Math.round(H*0.038)+'px "Baloo 2","Hiragino Maru Gothic ProN",sans-serif'; ctx.fillText(o.lbl, x+bw/2, y-bh*0.12);
+      ctx.font=Math.round(H*0.026)+'px "Hiragino Maru Gothic ProN",sans-serif'; ctx.fillText('（データなし）', x+bw/2, y+bh*0.22);
+    } else {
+      pauseButton(x,y,bw,bh,o.lbl,i===sel,false);
+      game._openHit.push({x,y:y-bh/2,w:bw,h:bh,act:o.act});
+    }
+    x+=bw+gap;
+  }
+  ctx.textBaseline='alphabetic'; ctx.fillStyle='rgba(30,50,30,0.6)'; ctx.font=Math.round(H*0.028)+'px "Hiragino Maru Gothic ProN",sans-serif';
+  ctx.fillText('タップ / \u2190 \u2192 でせんたく ・ ジャンプでけってい', W/2, H*0.95);
+}
 function renderTitle(){
   ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height);
   const th = game.theme || THEMES.overworld;
@@ -342,4 +390,4 @@ function renderStage(){
   else if(game.state==='win') drawWin();
 }
 
-export { centerText, dim, drawBrick, drawBush, drawBushes, drawCastle, drawClearOverlay, drawCloud, drawClouds, drawCoinHUD, drawCoinTile, drawGameOver, drawGoal, drawGround, drawHUD, drawHills, drawLifeHUD, drawPause, drawPipe, drawQuestion, drawSky, drawStone, drawTile, drawTiles, drawTitle, drawUsed, drawWin, pad6, renderStage, renderTitle };
+export { centerText, dim, drawBrick, drawBush, drawBushes, drawCastle, drawClearOverlay, drawCloud, drawClouds, drawCoinHUD, drawCoinTile, drawGameOver, drawGoal, drawGround, drawHUD, drawHills, drawLifeHUD, drawPause, drawPipe, drawQuestion, drawSky, drawStone, drawTile, drawTiles, drawTitle, drawUsed, drawWin, pad6, renderStage, renderTitle, renderOpening };

@@ -1,4 +1,4 @@
-import { COYOTE, GRAVITY, GRAVITY_E, GROWANIM, HOLD_G, INVINC, JBUF, JUMP_V, MAXFALL } from '../core/constants.js';
+import { COYOTE, GRAVITY, GRAVITY_E, GROWANIM, HOLD_G, INVINC, JBUF, JUMP_V, MAXFALL, SKINS } from '../core/constants.js';
 import { edge, input } from '../core/input.js';
 import { clamp, lerp, rand } from '../core/utils.js';
 import { drawCoin, drawCreature, shellDome } from '../draw/creatures.js';
@@ -7,6 +7,8 @@ import { camW, ctx, ellipse, rr, scale } from '../engine/canvas.js';
 import { collideX, collideY, countFB, game, solidTile, spawnDust, spawnFireball, spawnSpark } from './state.js';
 
 // ============ PLAYER ============
+function charStats(){ const sk=SKINS[(game.skin)|0]; return (sk&&sk.stats)||{jump:1,speed:1,fall:1}; }
+
 class Player{
   constructor(){ this.form='small'; this.sizeFromForm(); this.x=0; this.y=0; this.vx=0; this.vy=0; this.riding=null;
     this.facing=1; this.onGround=false; this.jumping=false; this.jumpHeld=false; this.coyote=0; this.jumpBuffer=0;
@@ -34,7 +36,7 @@ class Player{
     this.blinkT-=dt; if(this.blinkT<=0){ if(this.blink){ this.blink=false; this.blinkT=rand(1.6,4.5); } else { this.blink=true; this.blinkT=0.12; } }
     this.crouch = (this.form!=='small' && input.down && this.onGround && Math.abs(this.vx)<0.7);
     const running=input.fire, onG=this.onGround;
-    const swim=game.water?0.82:1, maxWalk=1.7*swim, maxRun=2.95*swim, maxS=running?maxRun:maxWalk;
+    const CH=charStats(); const sp=CH.speed||1; const swim=game.water?0.82:1, maxWalk=1.7*swim*sp, maxRun=2.95*swim*sp, maxS=running?maxRun:maxWalk;
     const accel = onG?(running?0.235:0.16):0.12;
     let dir=0; if(input.left) dir=-1; else if(input.right) dir=1;
     if(this.crouch) dir=0;
@@ -52,11 +54,11 @@ class Player{
     } else {
       if(onG) this.coyote=COYOTE*(D.coyoteMul||1); else if(this.coyote>0) this.coyote--;
       if(edge.jump) this.jumpBuffer=JBUF*(D.bufferMul||1); else if(this.jumpBuffer>0) this.jumpBuffer--;
-      if(this.jumpBuffer>0 && (onG||this.coyote>0)){ this.vy=-JUMP_V*(D.jumpMul||1); this.onGround=false; this.coyote=0; this.jumpBuffer=0; this.jumping=true; sfxJump(); spawnDust(this.x+this.w/2,this.y+this.h); }
+      if(this.jumpBuffer>0 && (onG||this.coyote>0)){ this.vy=-JUMP_V*(D.jumpMul||1)*(CH.jump||1); this.onGround=false; this.coyote=0; this.jumpBuffer=0; this.jumping=true; sfxJump(); spawnDust(this.x+this.w/2,this.y+this.h); }
       if(this.vy<0 && !this.jumpHeld && this.jumping){ this.vy*=(D.cutKeep!=null?D.cutKeep:0.45); this.jumping=false; }
       if(this.fly>0 && this.jumpHeld){ this.vy-=0.62; if(this.vy<-3.6) this.vy=-3.6; this.jumping=false; }
-      const g=((this.vy<0 && this.jumpHeld)?HOLD_G:GRAVITY)*(D.gravityMul||1)*(this.fly>0?0.55:1);
-      this.vy+=g; const mf=MAXFALL*(D.fallMul||1)*(this.fly>0?0.5:1); if(this.vy>mf) this.vy=mf;
+      let g=((this.vy<0 && this.jumpHeld)?HOLD_G:GRAVITY)*(D.gravityMul||1)*(this.fly>0?0.55:1); if(this.vy>=0) g*=(CH.fall||1);
+      this.vy+=g; const mf=MAXFALL*(D.fallMul||1)*(this.fly>0?0.5:1)*(CH.fall||1); if(this.vy>mf) this.vy=mf;
     }
     this._hitL=this._hitR=this._hitU=this._hitD=false; this.onGround=false;
     collideX(this); collideY(this,true);

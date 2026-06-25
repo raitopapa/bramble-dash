@@ -54,7 +54,7 @@ function collideY(e,isPlayer){
 }
 
 function skinUnlocked(i){ const c=game.mapCleared||[]; const gems=Object.keys(game.gems||{}).length;
-  switch(i){ case 0: return true; case 1: return !!c[2]; case 2: return !!c[5]; case 3: return !!c[8]; case 4: return !!c[11]; case 5: return gems>=4; default: return false; } }
+  switch(i){ case 0: case 1: case 2: case 3: return true; case 4: return !!c[11]; case 5: return gems>=4; default: return false; } }
 function addScore(n){ game.score+=n; }
 function addCoin(n){ game.coins+=n; while(game.coins>=100){ game.coins-=100; game.lives++; sfx1up(); popupWorld(game.player.x, game.player.y-12, '1UP', '#fff'); } }
 function popupWorld(x,y,text,color){ game.popups.push(new Popup(x,y,text,color||'#fff')); }

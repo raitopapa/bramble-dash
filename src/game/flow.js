@@ -10,6 +10,8 @@ import { addCoin, addScore, collideX, collideY, game, gget, gset, killEnemy, pop
 // ============ GAME FLOW ============
 function newGame(){ game.diff=DIFFICULTY[game.difficulty]||DIFFICULTY[0]; if(!game.player) game.player=new Player(); if(game.lives<=0) game.lives=game.diff.lives; game.player.form=game.diff.startBig?'big':'small'; game.confetti=[]; game.mapNode=Math.max(0, Math.min(game.mapMaxUnlocked|0, LEVELS.length-1)); game.state='worldmap'; setMusicTrack('map'); duckMusic(1); }
 function saveProgress(){ try{ localStorage.setItem('brambleDash.save', JSON.stringify({ cleared:game.mapCleared, unlocked:game.mapMaxUnlocked, coins:game.coins, lives:Math.max(0,game.lives), score:game.score, difficulty:game.difficulty, gems:Object.keys(game.gems||{}).map(Number), skin:game.skin|0 })); }catch(e){} }
+function hasSave(){ try{ return !!localStorage.getItem('brambleDash.save'); }catch(e){ return false; } }
+function wipeSave(){ try{ localStorage.removeItem('brambleDash.save'); }catch(e){} game.mapCleared=[]; game.mapMaxUnlocked=0; game.mapNode=0; game.coins=0; game.score=0; game.gems={}; game.skin=0; game.lives=(game.diff&&game.diff.lives)||3; }
 function loadProgress(){ try{ const s=localStorage.getItem('brambleDash.save'); if(!s) return; const d=JSON.parse(s); if(Array.isArray(d.cleared)) game.mapCleared=d.cleared; if(typeof d.unlocked==='number') game.mapMaxUnlocked=d.unlocked; if(typeof d.coins==='number') game.coins=d.coins; if(typeof d.lives==='number') game.lives=d.lives; if(typeof d.score==='number') game.score=d.score; if(typeof d.difficulty==='number'){ game.difficulty=Math.max(0,Math.min(d.difficulty,DIFFICULTY.length-1)); game.diff=DIFFICULTY[game.difficulty]; } if(Array.isArray(d.gems)){ game.gems={}; for(const k of d.gems) game.gems[k]=true; } if(typeof d.skin==='number') game.skin=d.skin|0; }catch(e){} }
 function startLevel(idx, respawn){
   const lvl=LEVELS[idx]();
@@ -200,4 +202,4 @@ function updateMenu(dt){
   }
 }
 
-export { collectCoins, cull, doStompBounce, enterBonus, exitBonus, loadProgress, newGame, nextLevel, resolvePlayerEnemies, returnToMap, saveProgress, startClear, startLevel, stompReward, updateCamera, updateClear, updateDying, updateMenu, updateParticlesOnly, updatePlaying, collectGem };
+export { collectCoins, cull, doStompBounce, enterBonus, exitBonus, loadProgress, newGame, nextLevel, resolvePlayerEnemies, returnToMap, saveProgress, startClear, startLevel, stompReward, updateCamera, updateClear, updateDying, updateMenu, updateParticlesOnly, updatePlaying, collectGem, hasSave, wipeSave };

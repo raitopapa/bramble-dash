@@ -111,8 +111,22 @@ async function partA() {
   const tap = (name) => { input[name] = true; step(1); input[name] = false; step(1); };           // single edge
   const enterFromMap = () => { tap('jump'); };                                                     // map -> enter current level
 
-  assert(scenes.currentName === 'title', 'boots into title scene');
+  // opening screen: New Game / Continue
+  assert(scenes.currentName === 'opening', 'boots into the opening screen');
   scenes.render();
+  { const { hasSave } = await import('../src/game/flow.js');
+    // fresh: no save -> only はじめから; choosing it goes to title
+    state.game.skin = 0; tap('jump'); assert(game.state === 'title', 'opening: New Game -> title'); }
+  scenes.sync(); scenes.render();
+  // make a save, return to opening, and Continue should load it
+  { const flow2 = await import('../src/game/flow.js'); game.mapMaxUnlocked = 4; flow2.saveProgress();
+    game.state = 'opening'; scenes.sync(); scenes.render();
+    assert(flow2.hasSave() === true, 'save detected after saveProgress');
+    // select つづきから (sel=1 by default when save exists) and confirm
+    tap('jump'); assert(game.state === 'title', 'opening: Continue -> title'); }
+  // reset progress for the remaining tests (opening test left a loaded save)
+  { const flow3 = await import('../src/game/flow.js'); flow3.wipeSave(); }
+  game.mapMaxUnlocked = 0; game.mapCleared = []; game.mapNode = 0; game.state = 'title'; scenes.sync(); scenes.render();
 
   // title -> world map
   tap('start');
@@ -338,13 +352,20 @@ async function partA() {
   game.gems = {}; flow.startLevel(1); scenes.sync();
   { const p = game.player; p.invinc = 999; const gm = game.items.find(it => it.type === 'gem'); assert(gm, 'a gem exists to collect'); p.x = gm.x; p.y = gm.y; step(2); assert(Object.keys(game.gems).length >= 1, 'gem collected into save'); }
   game.mapCleared = []; game.gems = {};
-  assert(skinUnlocked(0) && !skinUnlocked(1) && !skinUnlocked(5), 'only default costume unlocked at start');
-  game.mapCleared[2] = true; assert(skinUnlocked(1), 'clearing world 1 unlocks the mint costume');
+  assert(skinUnlocked(0) && skinUnlocked(1) && skinUnlocked(2) && skinUnlocked(3) && !skinUnlocked(4) && !skinUnlocked(5), 'four base characters selectable at start, gold/rainbow hidden');
   game.mapCleared[11] = true; assert(skinUnlocked(4), 'beating the final boss unlocks the gold costume');
   game.gems = { 1: true, 3: true, 7: true, 10: true }; assert(skinUnlocked(5), 'all 4 gems unlock the rainbow costume');
   // render title with a costume selected + render player wearing each skin
   game.skin = 5; game.state = 'title'; scenes.sync(); scenes.render();
   game.skin = 4; scenes.render(); game.skin = 0; game.state = 'playing';
+
+  // per-character abilities: Sora runs faster, Mint jumps higher, Momo falls softer
+  const runVx = (skinIdx) => { game.skin = skinIdx; flow.startLevel(0); scenes.sync(); const p = game.player; p.invinc = 999; input.left = false; input.right = true; let peak = 0; for (let i = 0; i < 30; i++) { step(1); if (Math.abs(p.vx) > peak) peak = Math.abs(p.vx); } input.right = false; return peak; };
+  const vB = runVx(0), vS = runVx(2); game.skin = 0;
+  assert(vS > vB + 0.15, 'Sora runs faster than Bramble (' + vS.toFixed(2) + ' vs ' + vB.toFixed(2) + ')');
+  const jumpApex = (skinIdx) => { game.skin = skinIdx; flow.startLevel(0); scenes.sync(); const p = game.player; p.invinc = 999; input.left = input.right = false; for (let i = 0; i < 10; i++) step(1); const y0 = p.y; input.jump = true; let minY = p.y; for (let i = 0; i < 26; i++) { step(1); if (p.y < minY) minY = p.y; } input.jump = false; return y0 - minY; };
+  const aB = jumpApex(0), aM = jumpApex(1); game.skin = 0; input.jump = false; step(1);
+  assert(aM > aB + 2, 'Mint jumps higher than Bramble (' + aM.toFixed(1) + ' vs ' + aB.toFixed(1) + ')');
 
   // boss attack patterns: the sky boss fires projectiles and charges
   flow.newGame(); scenes.sync(); game.mapMaxUnlocked = 11; game.mapNode = 8; input.jump = false; step(1); enterFromMap();

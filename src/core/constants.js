@@ -42,12 +42,12 @@ const DIFFICULTY = [
 
 
 const SKINS = [
-  { id:'bramble', name:'ブランブル', sw:'#ff9a3c' },
-  { id:'mint', name:'ミント', sw:'#5fce72', pal:{ body:'#5fce72', top:'#8ee6a0', shade:'#2fa14e', belly:'#e2ffe8', cheek:'#3fae5e', foot:'#2f8f4e', out:'#1d6e36' } },
-  { id:'sora', name:'ソラ', sw:'#5aa6ff', pal:{ body:'#5aa6ff', top:'#8cc4ff', shade:'#2f6fd6', belly:'#e0efff', cheek:'#4a8ae6', foot:'#2f6fd6', out:'#1d4e9e' } },
-  { id:'momo', name:'モモ', sw:'#ff8ad2', pal:{ body:'#ff8ad2', top:'#ffb1e2', shade:'#e6589e', belly:'#ffe6f4', cheek:'#ff6abf', foot:'#d4569e', out:'#a83a76' } },
-  { id:'gold', name:'きんいろ', sw:'#ffd23a', hidden:true, pal:{ body:'#ffd23a', top:'#fff0a8', shade:'#e0a51e', belly:'#fff7d6', cheek:'#ffbe4a', foot:'#cf8f1a', out:'#9c7012' } },
-  { id:'rainbow', name:'にじいろ', sw:'#ff6bd6', hidden:true, rainbow:true },
+  { id:'bramble', name:'ブランブル', sw:'#ff9a3c', trait:'バランスがよい', icon:'balance', stats:{ jump:1.00, speed:1.00, fall:1.00 } },
+  { id:'mint', name:'ミント', sw:'#5fce72', trait:'たかく ジャンプ', icon:'jump', stats:{ jump:1.15, speed:0.97, fall:1.00 }, pal:{ body:'#5fce72', top:'#8ee6a0', shade:'#2fa14e', belly:'#e2ffe8', cheek:'#3fae5e', foot:'#2f8f4e', out:'#1d6e36' } },
+  { id:'sora', name:'ソラ', sw:'#5aa6ff', trait:'はやく はしる', icon:'speed', stats:{ jump:1.00, speed:1.20, fall:1.00 }, pal:{ body:'#5aa6ff', top:'#8cc4ff', shade:'#2f6fd6', belly:'#e0efff', cheek:'#4a8ae6', foot:'#2f6fd6', out:'#1d4e9e' } },
+  { id:'momo', name:'モモ', sw:'#ff8ad2', trait:'ふんわり おちる', icon:'float', stats:{ jump:1.06, speed:0.97, fall:0.74 }, pal:{ body:'#ff8ad2', top:'#ffb1e2', shade:'#e6589e', belly:'#ffe6f4', cheek:'#ff6abf', foot:'#d4569e', out:'#a83a76' } },
+  { id:'gold', name:'きんいろ', sw:'#ffd23a', hidden:true, trait:'スーパーパワー', icon:'star', stats:{ jump:1.10, speed:1.10, fall:0.88 }, pal:{ body:'#ffd23a', top:'#fff0a8', shade:'#e0a51e', belly:'#fff7d6', cheek:'#ffbe4a', foot:'#cf8f1a', out:'#9c7012' } },
+  { id:'rainbow', name:'にじいろ', sw:'#ff6bd6', hidden:true, rainbow:true, trait:'にじの ちから', icon:'sparkle', stats:{ jump:1.14, speed:1.14, fall:0.80 } },
 ];
 
 export { SKINS, BASE_VIEW_H, COYOTE, DIFFICULTY, GRAVITY, GRAVITY_E, GROWANIM, HOLD_G, INVINC, JBUF, JUMP_V, MAXFALL, SPRING_V, STEP, THEMES, TILE };
