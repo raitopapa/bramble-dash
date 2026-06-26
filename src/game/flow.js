@@ -73,7 +73,7 @@ function resolvePlayerEnemies(){
   const p=game.player; if(p.dead) return;
   for(const e of game.enemies){ if(e.dead||(e.squash&&e.squash>0)) continue; if(!aabb(p,e)) continue;
     if(p.star>0){ killEnemy(e); addScore(200); popupWorld(e.x,e.y-4,'200','#ffe24d'); sfxStomp(); continue; }
-    const fromAbove = p.vy>0.5 && (p.y+p.h)-e.y < e.h*0.7;
+    const fromAbove = p.vy>0.2 && (p.y+p.h)-e.y < e.h*0.95;
     if(e.type==='stomper'){ if(fromAbove){ e.stomp(); doStompBounce(); stompReward(e); } else { p.hurt(); if(p.dead) return; } }
     else if(e.type==='shellback'){
       if(e.state==='walk'){ if(fromAbove){ e.toShell(); doStompBounce(); stompReward(e); } else { p.hurt(); if(p.dead) return; } }

@@ -35,8 +35,8 @@ const THEMES = {
 };
 
 const DIFFICULTY = [
-  { id:'normal', name:'ふつう',                lives:3,  timeMul:1.0, enemyMul:1.0,  noHurt:false, noGameOver:false, startBig:false, jumpMul:1.00, gravityMul:1.00, fallMul:1.00, coyoteMul:1.0, bufferMul:1.0, cutKeep:0.45 },
-  { id:'age5',   name:'やさしい（5さい）',      lives:5,  timeMul:0.5, enemyMul:0.6,  noHurt:false, noGameOver:false, startBig:true,  jumpMul:1.12, gravityMul:0.86, fallMul:0.9,  coyoteMul:2.6, bufferMul:2.6, cutKeep:0.78 },
+  { id:'normal', name:'ふつう',                lives:4,  timeMul:0.8, enemyMul:0.80, noHurt:false, noGameOver:false, startBig:false, jumpMul:1.10, gravityMul:0.88, fallMul:0.92, coyoteMul:2.0, bufferMul:2.0, cutKeep:0.62 },
+  { id:'age5',   name:'やさしい（5さい）',      lives:6,  timeMul:0.4, enemyMul:0.5,  noHurt:false, noGameOver:false, startBig:true,  jumpMul:1.16, gravityMul:0.82, fallMul:0.88, coyoteMul:3.0, bufferMul:3.0, cutKeep:0.85 },
   { id:'age3',   name:'とてもやさしい（3さい）', lives:99, timeMul:0.0, enemyMul:0.42, noHurt:true,  noGameOver:true,  startBig:true,  jumpMul:1.20, gravityMul:0.74, fallMul:0.8,  coyoteMul:4.0, bufferMul:4.0, cutKeep:1.0  },
 ];
 

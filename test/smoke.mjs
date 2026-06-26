@@ -264,7 +264,7 @@ async function partA() {
 
   // difficulty selection on the title (left/right cycles, sets that mode's lives)
   game.state = 'title'; scenes.sync(); game.difficulty = 0; game.lives = 3;
-  tap('right'); assert(game.difficulty === 1 && game.lives === 5, 'right -> easy (5 lives)');
+  tap('right'); assert(game.difficulty === 1 && game.lives === 6, 'right -> easy (6 lives)');
   tap('right'); assert(game.difficulty === 2 && game.lives === 99, 'right -> very-easy (99 lives)');
   tap('right'); assert(game.difficulty === 0, 'wraps back to normal');
   tap('left'); assert(game.difficulty === 2, 'left wraps to very-easy');

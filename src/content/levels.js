@@ -7,8 +7,8 @@ class Grid{
   set(x,y,ch){ if(x<0||x>=this.w||y<0||y>=this.h) return; this.c[y][x]=ch; }
   get(x,y){ if(x<0||x>=this.w||y<0||y>=this.h) return ' '; return this.c[y][x]; }
 }
-function pipe(g,x,h,gy){ for(let j=0;j<h;j++){ g.set(x,gy-1-j,'P'); g.set(x+1,gy-1-j,'P'); } }
-function warpPipe(g,x,gy,h){ h=h||2; pipe(g,x,h,gy); (g.warps||(g.warps=[])).push({tx:x, ty:gy-h, w:2, out:false}); }
+function pipe(g,x,h,gy){ h=Math.min(h,2); for(let j=0;j<h;j++){ g.set(x,gy-1-j,'P'); g.set(x+1,gy-1-j,'P'); } }
+function warpPipe(g,x,gy,h){ h=Math.min(h||2,2); pipe(g,x,h,gy); (g.warps||(g.warps=[])).push({tx:x, ty:gy-h, w:2, out:false}); }
 function stairUp(g,x,n,gy){ for(let i=0;i<n;i++) for(let j=0;j<=i;j++) g.set(x+i,gy-1-j,'S'); }
 function stairDown(g,x,n,gy){ for(let i=0;i<n;i++) for(let j=0;j<=(n-1-i);j++) g.set(x+i,gy-1-j,'S'); }
 function row(g,x,y,n,ch){ for(let i=0;i<n;i++) g.set(x+i,y,ch); }
@@ -33,7 +33,7 @@ function finalize(g,opts){
 function buildLevel1(){
   const W=212,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
   for(let x=0;x<W;x++){ g.set(x,gy,'X'); g.set(x,gy+1,'X'); }
-  const pit=(x,w)=>{ for(let i=0;i<w;i++){ g.set(x+i,gy,' '); g.set(x+i,gy+1,' '); } };
+  const pit=(x,w)=>{ w=Math.min(w,2); for(let i=0;i<w;i++){ g.set(x+i,gy,' '); g.set(x+i,gy+1,' '); } };
   g.set(14,gy-1,'g');
   g.set(16,9,'?'); g.set(20,9,'!'); g.set(24,9,'?'); g.set(22,9,'B'); g.set(26,9,'B');
   row(g,30,9,3,'o');
@@ -61,7 +61,7 @@ warpPipe(g,8,gy,3);
 function buildLevel2(){
   const W=224,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
   for(let x=0;x<W;x++){ g.set(x,gy,'X'); g.set(x,gy+1,'X'); }
-  const pit=(x,w)=>{ for(let i=0;i<w;i++){ g.set(x+i,gy,' '); g.set(x+i,gy+1,' '); } };
+  const pit=(x,w)=>{ w=Math.min(w,2); for(let i=0;i<w;i++){ g.set(x+i,gy,' '); g.set(x+i,gy+1,' '); } };
   g.set(10,9,'?'); g.set(13,9,'!');
   g.set(18,gy-1,'g'); g.set(20,gy-1,'g');
   pit(26,3);
@@ -92,7 +92,7 @@ function buildLevel2(){
 function buildLevel3(){
   const W=204,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
   for(let x=0;x<W;x++){ g.set(x,gy,'S'); g.set(x,gy+1,'S'); g.set(x,0,'S'); g.set(x,1,'S'); }
-  const pit=(x,w)=>{ for(let i=0;i<w;i++){ g.set(x+i,gy,' '); g.set(x+i,gy+1,' '); } };
+  const pit=(x,w)=>{ w=Math.min(w,2); for(let i=0;i<w;i++){ g.set(x+i,gy,' '); g.set(x+i,gy+1,' '); } };
   const stal=(x,len)=>{ for(let j=0;j<len;j++) g.set(x,2+j,'S'); };
   g.set(12,gy-1,'g');
   stal(16,3); stal(17,2);
@@ -124,7 +124,7 @@ function buildLevel4(){
   // 2-2 : Underground (cave). Ceiling + stalactites, raised stone, piranha pipes.
   const W=212,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
   for(let x=0;x<W;x++){ g.set(x,gy,'S'); g.set(x,gy+1,'S'); g.set(x,0,'S'); g.set(x,1,'S'); }
-  const pit=(x,w)=>{ for(let i=0;i<w;i++){ g.set(x+i,gy,' '); g.set(x+i,gy+1,' '); } };
+  const pit=(x,w)=>{ w=Math.min(w,2); for(let i=0;i<w;i++){ g.set(x+i,gy,' '); g.set(x+i,gy+1,' '); } };
   const stal=(x,len)=>{ for(let j=0;j<len;j++) g.set(x,2+j,'S'); };
   const ped=(x,n,w)=>{ for(let i=0;i<w;i++) for(let j=0;j<n;j++) g.set(x+i,gy-1-j,'S'); };
   stal(6,3); stal(7,2); stal(15,4); stal(16,3);
@@ -186,7 +186,7 @@ function buildLevel6(){
   // 3-2 : Castle. Stone & breakable brick, battlements, piranha pipes, harder.
   const W=218,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
   for(let x=0;x<W;x++){ g.set(x,gy,'S'); g.set(x,gy+1,'S'); }
-  const pit=(x,w)=>{ for(let i=0;i<w;i++){ g.set(x+i,gy,' '); g.set(x+i,gy+1,' '); } };
+  const pit=(x,w)=>{ w=Math.min(w,2); for(let i=0;i<w;i++){ g.set(x+i,gy,' '); g.set(x+i,gy+1,' '); } };
   const pillar=(x,n)=>{ for(let j=0;j<n;j++) g.set(x,gy-1-j,'S'); };
   g.set(8,9,'B'); g.set(9,9,'?'); g.set(10,9,'B'); g.set(11,9,'!'); g.set(12,9,'B');
   g.set(15,gy-1,'k');
@@ -263,9 +263,9 @@ function buildBonus(){
   for(let x=7;x<W-7;x++){ g.set(x,gy-4,'S'); g.set(x,gy-5,'o'); }
   g.set(4,8,'o'); g.set(W-5,8,'o'); g.set(4,2,'o'); g.set(W-5,2,'o');
   // でぐちの どかん（↓でもどる）。周囲のコインを消してから設置
-  for(let yy=gy-1; yy>gy-1-3; yy--){ g.set(W-4,yy,' '); g.set(W-3,yy,' '); }
-  pipe(g, W-4, 3, gy);
-  (g.warps||(g.warps=[])).push({tx:W-4, ty:gy-3, w:2, out:true});
+  for(let yy=gy-1; yy>gy-1-2; yy--){ g.set(W-4,yy,' '); g.set(W-3,yy,' '); }
+  pipe(g, W-4, 2, gy);
+  (g.warps||(g.warps=[])).push({tx:W-4, ty:gy-2, w:2, out:true});
   return finalize(g,{theme:'sky',time:300,name:'ボーナス',spawnTX:2,gy,goalTX:W+20,goalGroundY:gy,goalPoleTopY:3,seed:99});
 }
 
