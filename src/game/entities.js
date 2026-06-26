@@ -242,9 +242,14 @@ class Wing{
 class WarpGate{
   constructor(tx,ty){ this.type='warp'; this.w=18; this.h=20; this.x=tx*16-1; this.y=ty*16-4; this.t=0; this.state='idle'; this.dead=false; }
   update(dt){ this.t+=dt; }
-  draw(){ const cx=this.x+this.w/2, cy=this.y+this.h/2, t=this.t; const cols=['#ffffff','#7cc0ff','#ff9ad2','#ffd24d'];
-    for(let i=3;i>=0;i--){ const r=4+i*3+Math.sin(t*3+i)*1; ctx.save(); ctx.globalAlpha=0.22+i*0.12; ctx.strokeStyle=cols[i]; ctx.lineWidth=2; ctx.beginPath(); ctx.ellipse(cx,cy,r*0.7,r,0,0,7); ctx.stroke(); ctx.restore(); }
-    ctx.fillStyle='#fff8c0'; ctx.beginPath(); for(let i=0;i<10;i++){ const a=-Math.PI/2+i*Math.PI/5+t, rad=(i%2)?2:4.6, x=cx+Math.cos(a)*rad, y=cy+Math.sin(a)*rad; i?ctx.lineTo(x,y):ctx.moveTo(x,y);} ctx.closePath(); ctx.fill();
+  draw(){ const cx=this.x+this.w/2, cy=this.y+this.h/2-1, t=this.t; const out=this.out;
+    const ring = out ? '#bfffce' : '#fff3b0', main = out ? '#5fd87a' : '#ffd24d', spk = out ? '#dfffe6' : '#fff8c0';
+    for(let i=3;i>=0;i--){ const r=4+i*3+Math.sin(t*3+i)*1; ctx.save(); ctx.globalAlpha=0.16+i*0.1; ctx.strokeStyle=ring; ctx.lineWidth=2; ctx.beginPath(); ctx.ellipse(cx,cy,r*0.7,r,0,0,7); ctx.stroke(); ctx.restore(); }
+    const bob=Math.sin(t*4)*2; ctx.save(); ctx.translate(cx, cy+bob); ctx.fillStyle=main; ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=1; ctx.beginPath();
+    if(out){ ctx.moveTo(0,-5); ctx.lineTo(4.5,0.5); ctx.lineTo(1.8,0.5); ctx.lineTo(1.8,5); ctx.lineTo(-1.8,5); ctx.lineTo(-1.8,0.5); ctx.lineTo(-4.5,0.5); }
+    else { ctx.moveTo(0,5); ctx.lineTo(4.5,-0.5); ctx.lineTo(1.8,-0.5); ctx.lineTo(1.8,-5); ctx.lineTo(-1.8,-5); ctx.lineTo(-1.8,-0.5); ctx.lineTo(-4.5,-0.5); }
+    ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+    ctx.fillStyle=spk; for(let i=0;i<3;i++){ const a=t*2+i*2.1, rx=cx+Math.cos(a)*7.5, ry=cy+Math.sin(a)*5.5; ctx.beginPath(); ctx.arc(rx,ry,0.9,0,7); ctx.fill(); }
   }
 }
 class Fireball{

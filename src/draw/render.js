@@ -193,7 +193,7 @@ function drawHUD(){
   drawLifeHUD(pad+fs*4.7, cy+fs*0.5, fs*0.5); txt('\u00d7'+(game.lives<0?0:game.lives), pad+fs*5.4, cy, 'left');
   txt('WORLD '+(game.level?game.level.name:'1-1'), canvas.width/2, pad, 'center');
   txt('TIME '+Math.ceil(game.time).toString().padStart(3,'0'), canvas.width-pad, pad, 'right');
-  if(game.inBonus){ const s=Math.max(0,Math.ceil(game.bonusTimer)); ctx.font=Math.round(canvas.height*0.032)+'px "Hiragino Maru Gothic ProN",sans-serif'; ctx.textAlign='center'; ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillText('ボーナス '+s, canvas.width/2+1, pad+fs*1.7+1); ctx.fillStyle='#ffe24d'; ctx.fillText('ボーナス '+s, canvas.width/2, pad+fs*1.7); }
+  if(game.inBonus){ ctx.font=Math.round(canvas.height*0.03)+'px "Hiragino Maru Gothic ProN",sans-serif'; ctx.textAlign='center'; const msg='ボーナス ・ みぎはしの どかんで \u2193 でもどる'; ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillText(msg, canvas.width/2+1, pad+fs*1.7+1); ctx.fillStyle='#ffe24d'; ctx.fillText(msg, canvas.width/2, pad+fs*1.7); }
 }
 function dim(a){ ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle='rgba(8,12,30,'+a+')'; ctx.fillRect(0,0,canvas.width,canvas.height); }
 function centerText(s,y,size,color,shadow){ ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=size+'px "Press Start 2P", monospace'; if(shadow){ ctx.fillStyle=shadow; ctx.fillText(s,canvas.width/2+2,y+2); } ctx.fillStyle=color; ctx.fillText(s,canvas.width/2,y); }

@@ -8,7 +8,7 @@ class Grid{
   get(x,y){ if(x<0||x>=this.w||y<0||y>=this.h) return ' '; return this.c[y][x]; }
 }
 function pipe(g,x,h,gy){ for(let j=0;j<h;j++){ g.set(x,gy-1-j,'P'); g.set(x+1,gy-1-j,'P'); } }
-function warpPipe(g,x,gy,h){ h=h||2; pipe(g,x,h,gy); g.set(x, gy-1-h, 'N'); }
+function warpPipe(g,x,gy,h){ h=h||2; pipe(g,x,h,gy); (g.warps||(g.warps=[])).push({tx:x, ty:gy-h, w:2, out:false}); }
 function stairUp(g,x,n,gy){ for(let i=0;i<n;i++) for(let j=0;j<=i;j++) g.set(x+i,gy-1-j,'S'); }
 function stairDown(g,x,n,gy){ for(let i=0;i<n;i++) for(let j=0;j<=(n-1-i);j++) g.set(x+i,gy-1-j,'S'); }
 function row(g,x,y,n,ch){ for(let i=0;i<n;i++) g.set(x+i,y,ch); }
@@ -28,7 +28,7 @@ function finalize(g,opts){
     spawnX:(opts.spawnTX||2)*16+2, spawnFeetY:gy*16, goalX:(opts.goalTX)*16+8,
     goalGroundY:(opts.goalGroundY!=null?opts.goalGroundY:gy)*16, goalPoleTop:(opts.goalPoleTopY!=null?opts.goalPoleTopY:4)*16,
     water:!!opts.water, platforms:opts.platforms||[],
-    world:opts.world||1, isBoss:!!opts.boss, bossHP:opts.bossHP||3, bossPal:opts.bossPal||null, bossName:opts.bossName||'ボス', zones:opts.zones||[], bossAtk:opts.bossAtk||null };
+    world:opts.world||1, isBoss:!!opts.boss, bossHP:opts.bossHP||3, bossPal:opts.bossPal||null, bossName:opts.bossName||'ボス', zones:opts.zones||[], bossAtk:opts.bossAtk||null, warps:(g.warps||[]) };
 }
 function buildLevel1(){
   const W=212,H=15,gy=13; const g=new Grid(W,H); g.gy=gy;
@@ -262,7 +262,11 @@ function buildBonus(){
   for(let x=5;x<W-5;x++){ g.set(x,6,'S'); g.set(x,5,'o'); }
   for(let x=7;x<W-7;x++){ g.set(x,gy-4,'S'); g.set(x,gy-5,'o'); }
   g.set(4,8,'o'); g.set(W-5,8,'o'); g.set(4,2,'o'); g.set(W-5,2,'o');
-  return finalize(g,{theme:'sky',time:300,name:'ボーナス',spawnTX:2,gy,goalTX:W+8,goalGroundY:gy,goalPoleTopY:3,seed:99});
+  // でぐちの どかん（↓でもどる）。周囲のコインを消してから設置
+  for(let yy=gy-1; yy>gy-1-3; yy--){ g.set(W-4,yy,' '); g.set(W-3,yy,' '); }
+  pipe(g, W-4, 3, gy);
+  (g.warps||(g.warps=[])).push({tx:W-4, ty:gy-3, w:2, out:true});
+  return finalize(g,{theme:'sky',time:300,name:'ボーナス',spawnTX:2,gy,goalTX:W+20,goalGroundY:gy,goalPoleTopY:3,seed:99});
 }
 
 function buildWater2(){

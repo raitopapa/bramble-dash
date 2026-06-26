@@ -299,10 +299,28 @@ async function partA() {
   { const p = game.player; p.invinc = 999; const wg = new E.Wing(0, 0); wg.state = 'idle'; wg.x = p.x + 2; wg.y = p.y + 2; wg.baseY = wg.y; game.items.push(wg); step(1); assert(p.fly > 0, 'wing pickup grants flight');
     input.jump = false; for (let i = 0; i < 3; i++) step(1); const yA = p.y; input.jump = true; let minY = p.y; for (let i = 0; i < 25; i++) { step(1); if (p.y < minY) minY = p.y; } input.jump = false; assert(minY < yA, 'flight rises while holding jump'); }
 
-  // --- bonus stage: warp in, auto-return, main level restored ---
-  flow.newGame(); scenes.sync(); input.jump = false; step(1); game.mapNode = 0; enterFromMap();
-  { const p = game.player; p.invinc = 999; const savedIdx = game.levelIndex; const wp = new E.WarpGate(0, 0); wp.x = p.x; wp.y = p.y; game.items.push(wp); step(1); assert(game.inBonus === true, 'warp gate enters the bonus room');
-    let guard = 0; while (game.inBonus && guard++ < 2000) step(1); assert(game.inBonus === false, 'bonus auto-returns after the timer'); assert(game.levelIndex === savedIdx, 'main level is restored after bonus'); }
+  // --- bonus stage: invisible warp pipe — stand on a PLAIN pipe and press DOWN; explicit exit pipe ---
+  flow.newGame(); scenes.sync(); input.jump = false; input.down = false; step(1); game.mapNode = 0; enterFromMap();
+  input.jump = false; input.down = false; for (let i = 0; i < 24; i++) step(1);
+  { const p = game.player; p.invinc = 999; const savedIdx = game.levelIndex;
+    assert(game.warps.length > 0, 'stage exposes a hidden warp zone (no sprite/marker)');
+    assert(!game.items.some(it => it.type === 'warp'), 'there is NO warp item/sprite — just a plain pipe');
+    const w = game.warps[0];
+    // stand on the pipe top
+    p.x = w.x; p.y = w.y - p.h - 2; p.vx = 0; p.vy = 0; input.left = input.right = false; input.down = false;
+    for (let i = 0; i < 12; i++) step(1);
+    // standing without pressing DOWN must NOT enter
+    step(2); assert(game.inBonus === false, 'standing on the pipe without pressing DOWN does not enter');
+    // press DOWN (edge) to enter
+    input.down = true; step(1); input.down = false; assert(game.inBonus === true, 'pressing DOWN on the pipe enters the bonus room');
+    assert(game.warps.some(z => z.out), 'bonus room has an exit warp pipe');
+    // no auto-return
+    let guard = 0; while (guard++ < 400) step(1); assert(game.inBonus === true, 'bonus does NOT auto-return on its own');
+    // exit via the exit pipe: drop onto it then press DOWN
+    const ex = game.warps.find(z => z.out); p.x = ex.x; p.y = ex.y - p.h - 2; p.vx = 0; p.vy = 0; input.down = false;
+    for (let i = 0; i < 12; i++) step(1);
+    input.down = true; step(1); input.down = false;
+    assert(game.inBonus === false, 'exit pipe returns to the main stage'); assert(game.levelIndex === savedIdx, 'main level restored after bonus'); }
 
   // --- pause -> return to world map ---
   flow.newGame(); scenes.sync(); input.jump = false; step(1); game.mapNode = 0; enterFromMap();
@@ -344,8 +362,8 @@ async function partA() {
     const x0 = p.x; for (let i = 0; i < 14; i++) { p.onGround = false; step(1); }
     assert(p.x > x0 + 1, 'wind pushes the player sideways'); }
 
-  // bonus warp pipes spawn a warp item in each world's first stage
-  for (const idx of [0, 3, 6, 9]) { flow.startLevel(idx); assert(game.items.some(it => it.type === 'warp'), 'world stage ' + idx + ' has a bonus warp pipe'); }
+  // each world's first stage has a hidden warp pipe (data-driven zone, no sprite)
+  for (const idx of [0, 3, 6, 9]) { flow.startLevel(idx); assert(game.warps.length > 0 && !game.items.some(it => it.type === 'warp'), 'world stage ' + idx + ' has a hidden (sprite-less) warp pipe'); }
 
   // gems (new item) + costume unlocks
   for (const idx of [1, 3, 7, 10]) { flow.startLevel(idx); assert(game.items.some(it => it.type === 'gem'), 'gem present in stage ' + idx); }

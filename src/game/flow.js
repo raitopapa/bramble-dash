@@ -21,6 +21,7 @@ function startLevel(idx, respawn){
   game.goalX=lvl.goalX; game.goalGroundY=lvl.goalGroundY; game.goalPoleTop=lvl.goalPoleTop;
   game.enemies=[]; game.items=[]; game.fireballs=[]; game.particles=[]; game.popups=[]; game.popcoins=[]; game.bumps=[]; game.hazards=[]; game.crumbles=[]; game.platforms=[]; game.checkpoints=[]; game.boss=null; game.bossShots=[]; game.bossWinTimer=0; game.pauseConfirm=false;
   game.water=!!lvl.water; game.inBonus=false; game.bonusTimer=0; game._bonus=null;
+  game.warps=(lvl.warps||[]).map(w=>({ x:w.tx*16, y:w.ty*16, w:w.w*16, out:!!w.out }));
   game.zones=(lvl.zones||[]).map(z=>({x:z.tx*16,y:z.ty*16,w:z.w*16,h:z.h*16,kind:z.kind,dir:z.dir||0,dx:z.dx||0,dy:z.dy||0,power:z.power||0.4}));
   const g=lvl.grid;
   for(let y=0;y<g.h;y++) for(let x=0;x<g.w;x++){ const c=g.c[y][x];
@@ -34,7 +35,6 @@ function startLevel(idx, respawn){
     else if(c==='O'){ game.boss=new Boss(x,y); g.c[y][x]=' '; }
     else if(c==='*'){ const s=new Star(x,y); s.state='idle'; s.baseY=y*16; game.items.push(s); g.c[y][x]=' '; }
     else if(c==='^'){ const w=new Wing(x,y); w.state='idle'; w.baseY=y*16; game.items.push(w); g.c[y][x]=' '; }
-    else if(c==='N'){ game.items.push(new WarpGate(x,y)); g.c[y][x]=' '; }
     else if(c==='G'){ const gm=new Gem(x,y); gm.lvl=game.levelIndex; game.items.push(gm); g.c[y][x]=' '; }
   }
   game.platforms = (lvl.platforms||[]).map(d=>new MovingPlatform(d));
@@ -118,7 +118,6 @@ function applyZones(p){
 function updatePlaying(dt){
   const p=game.player;
   if(edge.pause||edge.start){ game.state='paused'; game.pauseSel=0; game.pauseConfirm=false; duckMusic(0); sfxPause(); return; }
-  if(game.inBonus){ game.bonusTimer-=dt; if(game.bonusTimer<=0){ exitBonus(); return; } }
   game.time-=dt*2.4*game.diff.timeMul; if(game.time<0)game.time=0;
   if(game.time<=0 && game.diff.timeMul>0 && !p.dead){ p.die(); return; }
   for(const pf of game.platforms) pf.update(dt);
@@ -129,7 +128,8 @@ function updatePlaying(dt){
   if(game.state!=='playing') return;
   for(const pf of game.platforms){ if(p.vy>=0){ const feet=p.y+p.h, overX=(p.x+p.w>pf.x && p.x<pf.x+pf.w); if(overX && feet>=pf.y-3 && feet<=pf.y+pf.h+6){ p.y=pf.y-p.h; p.vy=0; p.onGround=true; p._hitD=true; p.riding=pf; } } }
   for(const cp of game.checkpoints){ if(!cp.active && (p.x+p.w/2)>=cp.x){ cp.active=true; game.checkpointX=cp.x; popupWorld(cp.x, cp.y-18, 'CHECK!', '#9effa0'); sfxCheckpoint(); } }
-  for(const it of game.items){ it.update(dt); if(it.dead) continue; if(aabb(p,it)){ if(it.type==='mushroom'){ if(p.form==='small') p.grow(); addScore(1000); popupWorld(it.x,it.y-4,'1000'); it.dead=true; } else if(it.type==='flower'){ p.toFire(); addScore(1000); popupWorld(it.x,it.y-4,'1000'); it.dead=true; } else if(it.type==='star'){ p.star=Math.max(p.star,9); p.invinc=Math.max(p.invinc,0.3); addScore(1000); popupWorld(it.x,it.y-4,'STAR!','#ffe24d'); it.dead=true; sfxPowerup(); } else if(it.type==='wing'){ p.fly=Math.max(p.fly,9); addScore(1000); popupWorld(it.x,it.y-4,'FLY!','#bfe9ff'); it.dead=true; sfxPowerup(); } else if(it.type==='warp'){ it.dead=true; sfxWarp(); enterBonus(); return; } else if(it.type==='gem'){ it.dead=true; collectGem(it.lvl); } } }
+  if(game.warps.length && edge.down && p.vy>=-0.5){ const cx=p.x+p.w/2, feet=p.y+p.h; for(const w of game.warps){ if(cx>=w.x-2 && cx<=w.x+w.w+2 && feet>=w.y-10 && feet<=w.y+6){ if(w.out){ sfxWarp(); exitBonus(); } else { sfxWarp(); enterBonus(); } return; } } }
+  for(const it of game.items){ it.update(dt); if(it.dead) continue; if(aabb(p,it)){ if(it.type==='mushroom'){ if(p.form==='small') p.grow(); addScore(1000); popupWorld(it.x,it.y-4,'1000'); it.dead=true; } else if(it.type==='flower'){ p.toFire(); addScore(1000); popupWorld(it.x,it.y-4,'1000'); it.dead=true; } else if(it.type==='star'){ p.star=Math.max(p.star,9); p.invinc=Math.max(p.invinc,0.3); addScore(1000); popupWorld(it.x,it.y-4,'STAR!','#ffe24d'); it.dead=true; sfxPowerup(); } else if(it.type==='wing'){ p.fly=Math.max(p.fly,9); addScore(1000); popupWorld(it.x,it.y-4,'FLY!','#bfe9ff'); it.dead=true; sfxPowerup(); } else if(it.type==='gem'){ it.dead=true; collectGem(it.lvl); } } }
   for(const e of game.enemies) e.update(dt);
   for(const e of game.enemies){ if(e.dead)continue; if(e.type==='shellback'&&e.state==='slide'){ for(const o of game.enemies){ if(o===e||o.dead||(o.squash&&o.squash>0)||o.type==='chomper')continue; if(aabb(e,o)){ killEnemy(o); addScore(200); popupWorld(o.x,o.y-4,'200'); sfxKick(); } } } }
   resolvePlayerEnemies();
@@ -174,12 +174,13 @@ function enterBonus(){
   game._bonus={ grid:game.grid, level:game.level, theme:game.theme, worldW:game.worldW, worldH:game.worldH,
     goalX:game.goalX, goalGroundY:game.goalGroundY, goalPoleTop:game.goalPoleTop,
     enemies:game.enemies, items:game.items, fireballs:game.fireballs, particles:game.particles, popups:game.popups, popcoins:game.popcoins, bumps:game.bumps, hazards:game.hazards, crumbles:game.crumbles, platforms:game.platforms, checkpoints:game.checkpoints, checkpointX:game.checkpointX, boss:game.boss, bossShots:game.bossShots,
-    camX:game.camX, camY:game.camY, time:game.time, levelIndex:game.levelIndex, water:game.water, zones:game.zones, px:p.x, py:p.y, form:p.form };
+    camX:game.camX, camY:game.camY, time:game.time, levelIndex:game.levelIndex, water:game.water, zones:game.zones, warps:game.warps, px:p.x, py:p.y, form:p.form };
   const b=buildBonus();
   game.level=b; game.grid=b.grid; game.theme=b.theme; game.worldW=b.grid.w*16; game.worldH=b.grid.h*16;
   game.goalX=99999; game.goalGroundY=b.goalGroundY; game.goalPoleTop=b.goalPoleTop;
   game.enemies=[]; game.items=[]; game.fireballs=[]; game.particles=[]; game.popups=[]; game.popcoins=[]; game.bumps=[]; game.hazards=[]; game.crumbles=[]; game.platforms=[]; game.checkpoints=[]; game.boss=null; game.bossShots=[];
-  game.water=false; game.zones=[]; game.inBonus=true; game.bonusTimer=12;
+  game.water=false; game.zones=[]; game.inBonus=true; game.bonusTimer=0;
+  game.warps=(b.warps||[]).map(w=>({ x:w.tx*16, y:w.ty*16, w:w.w*16, out:!!w.out }));
   p.x=b.spawnX; p.y=b.spawnFeetY-p.h; p.vx=0; p.vy=0; p.onGround=false; p.star=0; p.fly=0;
   game.camX=0; game.camY=0; setMusicTrack('bonus'); duckMusic(1); sfxPowerup();
 }
@@ -187,12 +188,12 @@ function exitBonus(){ const s=game._bonus; if(!s){ game.inBonus=false; return; }
   game.grid=s.grid; game.level=s.level; game.theme=s.theme; game.worldW=s.worldW; game.worldH=s.worldH;
   game.goalX=s.goalX; game.goalGroundY=s.goalGroundY; game.goalPoleTop=s.goalPoleTop;
   game.enemies=s.enemies; game.items=s.items; game.fireballs=s.fireballs; game.particles=s.particles; game.popups=s.popups; game.popcoins=s.popcoins; game.bumps=s.bumps; game.hazards=s.hazards; game.crumbles=s.crumbles; game.platforms=s.platforms; game.checkpoints=s.checkpoints; game.checkpointX=s.checkpointX; game.boss=s.boss; game.bossShots=s.bossShots||[];
-  game.levelIndex=s.levelIndex; game.water=s.water; game.zones=s.zones||[]; game.time=s.time;
+  game.levelIndex=s.levelIndex; game.water=s.water; game.zones=s.zones||[]; game.warps=s.warps||[]; game.time=s.time;
   p.form=s.form; p.sizeFromForm(); p.x=s.px; p.y=s.py; p.vx=0; p.vy=0;
   game.camX=s.camX; game.camY=s.camY; game.inBonus=false; game.bonusTimer=0; game._bonus=null;
   setMusicTrack(game.level.themeName||'overworld'); duckMusic(1);
 }
-function returnToMap(){ game.inBonus=false; game.bonusTimer=0; game._bonus=null; game.water=false; game.zones=[]; game.bossShots=[]; const p=game.player; if(p){ p.star=0; p.fly=0; } game.state='worldmap'; game.mapNode=Math.max(0,Math.min(game.mapNode|0,LEVELS.length-1)); setMusicTrack('map'); duckMusic(1); saveProgress(); }
+function returnToMap(){ game.inBonus=false; game.bonusTimer=0; game._bonus=null; game.water=false; game.zones=[]; game.bossShots=[]; game.warps=[]; const p=game.player; if(p){ p.star=0; p.fly=0; } game.state='worldmap'; game.mapNode=Math.max(0,Math.min(game.mapNode|0,LEVELS.length-1)); setMusicTrack('map'); duckMusic(1); saveProgress(); }
 function updateMenu(dt){
   if(edge.start||edge.jump||game.oneShotStart){ game.oneShotStart=false; newGame(); return; }
   game.oneShotStart=false;
